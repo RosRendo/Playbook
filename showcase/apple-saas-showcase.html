@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple-Grade SaaS UI Showcase — FullStack Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Outfit', -apple-system, sans-serif;
+      --font-sans: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --bg-canvas: #090a10;
+      --glass-surface: rgba(255, 255, 255, 0.04);
+      --glass-surface-hover: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.10);
+      --glass-border-specular: rgba(255, 255, 255, 0.30);
+      --glass-blur: blur(28px) saturate(190%);
+
+      --spring-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+      --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+      --color-frontend: #f472b6;
+      --color-backend: #34d399;
+      --color-database: #38bdf8;
+      --color-auth: #a78bfa;
+      --color-payment: #facc15;
+      --color-ai: #c084fc;
+      --color-danger: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+        radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 15% 70%, rgba(56, 189, 248, 0.10) 0%, transparent 50%);
+      color: #f8fafc;
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      padding: 40px 20px 80px 20px;
+      overflow-x: hidden;
+    }
+
+    /* Header Nav */
+    header {
+      max-width: 1160px;
+      margin: 0 auto 40px auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--glass-surface);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 9999px;
+      box-shadow: 0 4px 24px -2px rgba(0,0,0,0.5);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    }
+
+    /* State Switcher Pills */
+    .state-switcher {
+      display: flex;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .state-pill {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.25s var(--spring-smooth);
+    }
+
+    .state-pill:hover {
+      color: #ffffff;
+    }
+
+    .state-pill.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Bento Grid Layout */
+    .bento-container {
+      max-width: 1160px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .bento-card {
+      position: relative;
+      background: var(--glass-surface);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 28px;
+      padding: 32px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+      transition: transform 0.4s var(--spring-smooth), box-shadow 0.4s var(--spring-smooth), border-color 0.3s ease;
+    }
+
+    /* Top specular highlight */
+    .bento-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 5%, var(--glass-border-specular) 50%, transparent 95%);
+    }
+
+    /* Spotlight Glow Layer */
+    .bento-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 28px;
+      background: radial-gradient(400px circle at var(--mouse-x, -500px) var(--mouse-y, -500px), rgba(255, 255, 255, 0.08), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .bento-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.7);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .bento-card:hover::after {
+      opacity: 1;
+    }
+
+    .span-2 {
+      grid-column: span 2;
+    }
+
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    /* Tactile Pill Buttons */
+    .apple-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      border: none;
+      transition: transform 0.25s var(--spring-smooth), filter 0.2s ease, box-shadow 0.25s var(--spring-smooth);
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: #ffffff;
+      color: #090a10;
+      box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.95);
+      transition-duration: 0.1s;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary:active {
+      transform: scale(0.95);
+      transition-duration: 0.1s;
+    }
+
+    /* Metric Display */
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin: 12px 0 8px 0;
+      background: linear-gradient(180deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .metric-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-backend);
+    }
+
+    /* Slide to Confirm Widget */
+    .slider-track {
+      position: relative;
+      width: 100%;
+      height: 56px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .slider-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: rgba(16, 185, 129, 0.25);
+      pointer-events: none;
+      width: 52px;
+      transition: width 0.05s linear;
+    }
+
+    .slider-label {
+      width: 100%;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+      pointer-events: none;
+    }
+
+    .slider-thumb {
+      position: absolute;
+      left: 4px;
+      width: 48px;
+      height: 48px;
+      border-radius: 9999px;
+      background: #10b981;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+      transition: transform 0.05s linear;
+    }
+
+    .slider-thumb:active {
+      cursor: grabbing;
+    }
+
+    /* Skeleton Loading Animation */
+    .skeleton-box {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.03) 25%,
+        rgba(255, 255, 255, 0.08) 50%,
+        rgba(255, 255, 255, 0.03) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite linear;
+      border-radius: 8px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* 3D Sticker Mockup Card */
+    .sticker-art {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 20px auto;
+      border-radius: 32px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.02));
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(2deg); }
+    }
+
+    /* Interactive States Views */
+    .view-section {
+      display: none;
+    }
+
+    .view-section.active {
+      display: grid;
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .bento-container {
+        grid-template-columns: 1fr;
+      }
+      .span-2 {
+        grid-column: span 1;
+      }
+      header {
+        flex-direction: column;
+        gap: 16px;
+        border-radius: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Interactive State Switcher -->
+  <header>
+    <div class="brand">
+      <div class="brand-mark">🍎</div>
+      <span>Apple SaaS Design System</span>
+    </div>
+    
+    <div class="state-switcher">
+      <button class="state-pill active" onclick="switchState('populated')">Populated</button>
+      <button class="state-pill" onclick="switchState('loading')">Loading Skeleton</button>
+      <button class="state-pill" onclick="switchState('empty')">3D Empty State</button>
+      <button class="state-pill" onclick="switchState('payment')">Slide to Pay</button>
+    </div>
+  </header>
+
+  <!-- STATE 1: POPULATED BENTO DASHBOARD -->
+  <main id="view-populated" class="bento-container view-section active">
+    
+    <!-- Hero 2-Column Bento Card -->
+    <div class="bento-card span-2" onmousemove="handleSpotlight(event, this)">
+      <div class="card-badge" style="background: rgba(244, 114, 182, 0.12); color: var(--color-frontend); border: 1px solid rgba(244, 114, 182, 0.2);">
+        <span>✦</span> Intelligence Engine
+      </div>
+      <h2 class="card-title">Real-Time Revenue Telemetry</h2>
+      <p class="card-desc">Streaming live payments with ABA PAYWAY KHQR and Stripe Checkout. End-to-end verified webhooks with zero duplicate ledger records.</p>
+      
+      <div style="display: flex; gap: 40px; margin-bottom: 28px;">
+        <div>
+          <div style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">ARR Volume</div>
+          <div class="metric-value">$148.2k</div>
+          <div class="metric-trend">↑ +24.8% vs last month</div>
+        </div>
+        <div>
+          <div style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Active Tenants</div>
+          <div class="metric-value">1,842</div>
+          <div class="metric-trend">↑ 100% IDOR Scoped</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <button class="apple-btn btn-primary" onclick="Sound.playSuccess()">
+          Deploy Vertical Slice
+        </button>
+        <button class="apple-btn btn-secondary" onclick="Sound.playBlip()">
+          Inspect Telemetry
+        </button>
+      </div>
+    </div>
+
+    <!-- Metric Card 1: Security Shield -->
+    <div class="bento-card" onmousemove="handleSpotlight(event, this)">
+      <div class="card-badge" style="background: rgba(167, 139, 250, 0.12); color: var(--color-auth); border: 1px solid rgba(167, 139, 250, 0.2);">
+        <span>🛡️</span> Security Shield
+      </div>
+      <h3 class="card-title" style="font-size: 1.3rem;">Tenant Isolation</h3>
+      <div class="metric-value" style="font-size: 2.2rem; margin: 16px 0;">0 Leaks</div>
+      <p class="card-desc" style="font-size: 0.85rem;">All PostgreSQL queries filter strictly by session user ID.</p>
+      <button class="apple-btn btn-secondary" style="width: 100%;" onclick="Sound.playBlip()">Run SAST Audit</button>
+    </div>
+
+    <!-- Feature Card 2: Async Workers -->
+    <div class="bento-card" onmousemove="handleSpotlight(event, this)">
+      <div class="card-badge" style="background: rgba(52, 211, 153, 0.12); color: var(--color-backend); border: 1px solid rgba(52, 211, 153, 0.2);">
+        <span>⚡</span> BullMQ Queue
+      </div>
+      <h3 class="card-title" style="font-size: 1.3rem;">Worker Latency</h3>
+      <div class="metric-value" style="font-size: 2.2rem; margin: 16px 0;">180ms</div>
+      <p class="card-desc" style="font-size: 0.85rem;">Redis background queue processing invoice PDFs and webhooks.</p>
+    </div>
+
+    <!-- Feature Card 3: Storage -->
+    <div class="bento-card" onmousemove="handleSpotlight(event, this)">
+      <div class="card-badge" style="background: rgba(56, 189, 248, 0.12); color: var(--color-database); border: 1px solid rgba(56, 189, 248, 0.2);">
+        <span>☁️</span> Cloudflare R2
+      </div>
+      <h3 class="card-title" style="font-size: 1.3rem;">Presigned Direct</h3>
+      <div class="metric-value" style="font-size: 2.2rem; margin: 16px 0;">$0 Egress</div>
+      <p class="card-desc" style="font-size: 0.85rem;">Browser uploads directly to bucket without hitting server RAM.</p>
+    </div>
+
+    <!-- Feature Card 4: Audio Haptics -->
+    <div class="bento-card" onmousemove="handleSpotlight(event, this)">
+      <div class="card-badge" style="background: rgba(250, 204, 21, 0.12); color: var(--color-payment); border: 1px solid rgba(250, 204, 21, 0.2);">
+        <span>🔊</span> Web Audio Engine
+      </div>
+      <h3 class="card-title" style="font-size: 1.3rem;">Micro-Sounds</h3>
+      <p class="card-desc" style="font-size: 0.85rem; margin-top: 10px;">Test synthesized acoustic feedback directly:</p>
+      <div style="display: flex; gap: 8px;">
+        <button class="apple-btn btn-secondary" style="flex: 1;" onclick="Sound.playBlip()">Blip</button>
+        <button class="apple-btn btn-secondary" style="flex: 1;" onclick="Sound.playSuccess()">Chime</button>
+        <button class="apple-btn btn-secondary" style="flex: 1;" onclick="Sound.playError()">Buzz</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- STATE 2: LOADING SKELETON -->
+  <main id="view-loading" class="bento-container view-section">
+    <div class="bento-card span-2">
+      <div class="skeleton-box" style="width: 140px; height: 24px; margin-bottom: 20px;"></div>
+      <div class="skeleton-box" style="width: 60%; height: 36px; margin-bottom: 14px;"></div>
+      <div class="skeleton-box" style="width: 90%; height: 18px; margin-bottom: 30px;"></div>
+      <div style="display: flex; gap: 40px; margin-bottom: 30px;">
+        <div class="skeleton-box" style="width: 140px; height: 60px;"></div>
+        <div class="skeleton-box" style="width: 140px; height: 60px;"></div>
+      </div>
+      <div class="skeleton-box" style="width: 180px; height: 44px; border-radius: 9999px;"></div>
+    </div>
+    <div class="bento-card">
+      <div class="skeleton-box" style="width: 100px; height: 24px; margin-bottom: 20px;"></div>
+      <div class="skeleton-box" style="width: 70%; height: 28px; margin-bottom: 20px;"></div>
+      <div class="skeleton-box" style="width: 120px; height: 48px; margin-bottom: 20px;"></div>
+      <div class="skeleton-box" style="width: 100%; height: 40px; border-radius: 9999px;"></div>
+    </div>
+  </main>
+
+  <!-- STATE 3: 3D EMPTY STATE -->
+  <main id="view-empty" class="bento-container view-section" style="grid-template-columns: 1fr; max-width: 640px;">
+    <div class="bento-card" style="text-align: center; padding: 50px 30px;">
+      <div class="sticker-art">📂</div>
+      <h2 class="card-title">No Projects Deployed Yet</h2>
+      <p class="card-desc" style="max-width: 440px; margin: 0 auto 30px auto;">
+        Create your first vertical slice to start streaming real-time analytics, user telemetry, and verified webhook receipts.
+      </p>
+      <button class="apple-btn btn-primary" onclick="Sound.playSuccess()">
+        + Launch First Vertical Slice
+      </button>
+    </div>
+  </main>
+
+  <!-- STATE 4: SLIDE TO PAY / CONFIRM -->
+  <main id="view-payment" class="bento-container view-section" style="grid-template-columns: 1fr; max-width: 540px;">
+    <div class="bento-card" style="padding: 40px;">
+      <div class="card-badge" style="background: rgba(52, 211, 153, 0.12); color: var(--color-backend); border: 1px solid rgba(52, 211, 153, 0.2);">
+        <span>💳</span> Verified Transaction
+      </div>
+      <h2 class="card-title">Upgrade to Pro Workspace</h2>
+      <p class="card-desc">Unlimited team members, dedicated read-replica pooling, and priority BullMQ worker queues.</p>
+      
+      <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; margin-bottom: 28px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+          <span style="color: #94a3b8;">Subscription Plan</span>
+          <span style="font-weight: 600;">Pro Annual ($19/mo)</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;">
+          <span style="color: #94a3b8;">Total Billed Today</span>
+          <span style="font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: #ffffff;">$228.00 USD</span>
+        </div>
+      </div>
+
+      <!-- Slide to Confirm Gesture -->
+      <div class="slider-track" id="sliderTrack">
+        <div class="slider-fill" id="sliderFill"></div>
+        <div class="slider-label" id="sliderLabel">Slide to Confirm Payment →</div>
+        <div class="slider-thumb" id="sliderThumb">➔</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Web Audio Synthesizer (Native Web Audio API, Zero Audio Files)
+    const Sound = {
+      ctx: null,
+      getCtx() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) this.ctx = new AudioContextClass();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        return this.ctx;
+      },
+      playBlip(freq = 880, dur = 0.07) {
+        try {
+          const c = this.getCtx();
+          if (!c) return;
+          const osc = c.createOscillator();
+          const gain = c.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, c.currentTime);
+          gain.gain.setValueAtTime(0.12, c.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+          osc.connect(gain);
+          gain.connect(c.destination);
+          osc.start();
+          osc.stop(c.currentTime + dur);
+        } catch {}
+      },
+      playSuccess() {
+        try {
+          const c = this.getCtx();
+          if (!c) return;
+          const now = c.currentTime;
+          [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+            const osc = c.createOscillator();
+            const gain = c.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.06);
+            gain.gain.setValueAtTime(0.12, now + i * 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.35);
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start(now + i * 0.06);
+            osc.stop(now + i * 0.06 + 0.35);
+          });
+        } catch {}
+      },
+      playError() {
+        try {
+          const c = this.getCtx();
+          if (!c) return;
+          const now = c.currentTime;
+          const osc = c.createOscillator();
+          const gain = c.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(160, now);
+          osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.connect(gain);
+          gain.connect(c.destination);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } catch {}
+      }
+    };
+
+    // Spotlight Mouse Tracker
+    function handleSpotlight(e, card) {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.setProperty('--mouse-x', `${x}px`);
+      card.style.setProperty('--mouse-y', `${y}px`);
+    }
+
+    // Interactive State Switcher
+    function switchState(stateName) {
+      Sound.playBlip(920);
+      document.querySelectorAll('.state-pill').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+      const target = document.getElementById(`view-${stateName}`);
+      if (target) target.classList.add('active');
+    }
+
+    // Physical Slide to Confirm Slider Handler
+    const track = document.getElementById('sliderTrack');
+    const thumb = document.getElementById('sliderThumb');
+    const fill = document.getElementById('sliderFill');
+    const label = document.getElementById('sliderLabel');
+
+    let isDragging = false;
+    let isConfirmed = false;
+
+    if (track && thumb) {
+      const maxDrag = () => track.offsetWidth - thumb.offsetWidth - 8;
+
+      const onStart = () => { if (!isConfirmed) isDragging = true; };
+      const onMove = (e) => {
+        if (!isDragging || isConfirmed) return;
+        const rect = track.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const pos = Math.max(0, Math.min(clientX - rect.left - 24, maxDrag()));
+        thumb.style.transform = `translateX(${pos}px)`;
+        fill.style.width = `${pos + 48}px`;
+
+        if (pos >= maxDrag() * 0.9) {
+          isConfirmed = true;
+          isDragging = false;
+          thumb.style.transform = `translateX(${maxDrag()}px)`;
+          thumb.innerHTML = '✓';
+          thumb.style.background = '#10b981';
+          label.innerText = 'Payment Confirmed!';
+          label.style.color = '#10b981';
+          Sound.playSuccess();
+        }
+      };
+      const onEnd = () => {
+        if (isDragging && !isConfirmed) {
+          isDragging = false;
+          thumb.style.transform = 'translateX(0px)';
+          fill.style.width = '52px';
+        }
+      };
+
+      thumb.addEventListener('mousedown', onStart);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onEnd);
+
+      thumb.addEventListener('touchstart', onStart);
+      window.addEventListener('touchmove', onMove);
+      window.addEventListener('touchend', onEnd);
+    }
+  </script>
+</body>
+</html>

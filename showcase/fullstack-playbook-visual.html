@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Full-Stack Playbook — Engineering Cockpit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-canvas: #090a0d;
+      --surface-panel: #111318;
+      --surface-card: #15181f;
+      --surface-inset: #0c0e12;
+      --surface-hover: #1b1e27;
+      
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-hairline: rgba(255, 255, 255, 0.10);
+      --border-active: rgba(255, 255, 255, 0.22);
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: #f4f4f6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .panel-base {
+      background: var(--surface-panel);
+      border: 1px solid var(--border-hairline);
+      border-radius: 10px;
+    }
+
+    .panel-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .panel-card:hover {
+      border-color: var(--border-active);
+      background: var(--surface-hover);
+    }
+
+    .panel-inset {
+      background: var(--surface-inset);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #090a0d; }
+    ::-webkit-scrollbar-thumb { background: #232732; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #363c4c; }
+  </style>
+</head>
+<body class="selection:bg-white/20 flex flex-col min-h-screen">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-50 border-b border-white/[0.08] bg-[#090a0d]/95 backdrop-blur-md">
+    <div class="max-w-[1480px] mx-auto px-4 h-14 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-md bg-[#16181f] border border-white/15 flex items-center justify-center font-mono font-semibold text-xs text-white">
+          FS
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-sm tracking-tight text-white">Full-Stack Playbook</span>
+          <span class="text-[11px] font-mono text-slate-500 hidden sm:inline">/ Cockpit OS</span>
+        </div>
+      </div>
+
+      <!-- Segmented Tier Switcher -->
+      <div class="flex items-center bg-[#111318] p-1 rounded-lg border border-white/10 text-xs font-mono">
+        <button id="btn-mode-mvp" onclick="setPlaybookMode('mvp')" class="flex items-center gap-2 px-3 py-1 rounded-md transition-all bg-[#1d222b] text-white font-medium shadow-sm border border-white/10">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <span>MVP</span>
+        </button>
+        <button id="btn-mode-prod" onclick="setPlaybookMode('prod')" class="flex items-center gap-2 px-3 py-1 rounded-md transition-all text-slate-400 hover:text-slate-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+          <span>Production</span>
+        </button>
+        <button id="btn-mode-ent" onclick="setPlaybookMode('ent')" class="flex items-center gap-2 px-3 py-1 rounded-md transition-all text-slate-400 hover:text-slate-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+          <span>Enterprise</span>
+        </button>
+      </div>
+
+      <div class="font-mono text-xs text-slate-400 hidden lg:flex items-center gap-2">
+        <span class="text-slate-500 text-[10px]">CURRENT MODE:</span>
+        <span id="tier-pill-label" class="text-emerald-400 font-medium">Level 1 &bull; Modular Monolith</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- WORKSTATION BODY: SIDEBAR + FOCUSED STAGE -->
+  <div class="flex-1 flex max-w-[1480px] w-full mx-auto px-4 py-4 gap-4 overflow-hidden">
+    
+    <!-- LEFT SIDEBAR: STEP RAIL -->
+    <aside class="w-64 shrink-0 flex flex-col justify-between panel-base p-3 hidden md:flex border-white/[0.08] bg-[#0c0e12]">
+      <div class="space-y-4">
+        <div class="px-2 pt-1 border-b border-white/[0.06] pb-2">
+          <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Stage Navigation</span>
+          <div class="text-xs text-slate-300 font-medium mt-0.5">Execution Sequences</div>
+        </div>
+
+        <div class="space-y-4 font-mono text-xs overflow-y-auto max-h-[calc(100vh-210px)] pr-1">
+          <!-- Group 1 -->
+          <div class="space-y-1">
+            <div class="px-2 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">01. Scope & Gates</div>
+            <div class="space-y-0.5">
+              <button onclick="switchTab('decision')" id="tab-btn-decision" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition bg-[#1d222b] text-white border border-white/10 font-medium">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="compass" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Execution Engine</span>
+                </div>
+                <span id="dot-decision" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+
+              <button onclick="switchTab('prompts')" id="tab-btn-prompts" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="terminal" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Prompt Matrix</span>
+                </div>
+                <span id="dot-prompts" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+
+              <button onclick="switchTab('kill-list')" id="tab-btn-kill-list" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="ban" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Kill List Policy</span>
+                </div>
+                <span id="dot-kill-list" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Group 2 -->
+          <div class="space-y-1">
+            <div class="px-2 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">02. Architecture &amp; Stack</div>
+            <div class="space-y-0.5">
+              <button onclick="switchTab('arsenal')" id="tab-btn-arsenal" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="layers" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Tech Stack Arsenal</span>
+                </div>
+                <span id="dot-arsenal" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+
+              <button onclick="switchTab('topology')" id="tab-btn-topology" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="boxes" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Topology by Tier</span>
+                </div>
+                <span id="dot-topology" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+
+              <button onclick="switchTab('network')" id="tab-btn-network" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="network" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Packet Path</span>
+                </div>
+                <span id="dot-network" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Group 3 -->
+          <div class="space-y-1">
+            <div class="px-2 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">03. DevOps & Runbooks</div>
+            <div class="space-y-0.5">
+              <button onclick="switchTab('commands')" id="tab-btn-commands" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="command" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>DevOps Reference</span>
+                </div>
+                <span id="dot-commands" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+
+              <button onclick="switchTab('recipes')" id="tab-btn-recipes" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="chef-hat" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Deploy Runbooks</span>
+                </div>
+                <span id="dot-recipes" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Group 4 -->
+          <div class="space-y-1">
+            <div class="px-2 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">04. Triage & Scale</div>
+            <div class="space-y-0.5">
+              <button onclick="switchTab('troubleshoot')" id="tab-btn-troubleshoot" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="stethoscope" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Fault Diagnostics</span>
+                </div>
+                <span id="dot-troubleshoot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+
+              <button onclick="switchTab('scaling')" id="tab-btn-scaling" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="trending-up" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Scaling Ladder</span>
+                </div>
+                <span id="dot-scaling" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+
+              <button onclick="switchTab('costs')" id="tab-btn-costs" class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200">
+                <div class="flex items-center gap-2 truncate">
+                  <i data-lucide="dollar-sign" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Unit Economics</span>
+                </div>
+                <span id="dot-costs" class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 hidden"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-2.5 rounded-md bg-[#13161c] border border-white/[0.06] font-mono text-[11px] text-slate-400 flex items-center justify-between">
+        <span>Completed</span>
+        <span id="completed-count" class="text-white font-medium">0 / 10</span>
+      </div>
+    </aside>
+
+    <!-- MAIN STAGE: SINGLE FOCUSED VIEW -->
+    <main class="flex-1 flex flex-col space-y-3 min-w-0">
+      
+      <!-- ACTION BAR -->
+      <div class="panel-base px-4 py-2.5 flex items-center justify-between gap-3 text-xs font-mono">
+        <div class="flex items-center gap-2 truncate">
+          <span id="stage-category-label" class="text-slate-500 text-[11px]">01. SCOPE & GATES &bull; STEP 1 OF 10</span>
+          <span id="stage-title-label" class="text-white font-semibold text-xs hidden sm:inline">/ Execution Engine</span>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="toggleActiveTabVerified()" id="btn-verify-stage" class="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/10 bg-white/5 text-slate-400 hover:text-white transition">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            <span id="verify-stage-text" class="hidden sm:inline">Mark Verified</span>
+          </button>
+
+          <button onclick="navPrev()" id="btn-nav-prev" disabled class="p-1 rounded border border-white/10 bg-white/5 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <button onclick="navNext()" id="btn-nav-next" class="p-1 rounded border border-white/10 bg-white/5 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- FOCUSED CONTENT CONTAINER (ZERO SCROLLING CONFUSION) -->
+      <div class="flex-1 overflow-y-auto pr-1">
+        
+        <!-- 1. DECISION ENGINE -->
+        <div id="content-decision" class="stage-content space-y-4">
+          <div class="panel-base p-6 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+              <div>
+                <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Phase Boundary Gate</div>
+                <h3 class="text-xl font-semibold text-white tracking-tight">Stage-Gate Execution Engine</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Select the active phase to inspect single objective, prerequisite blocker, and forbidden scope.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-mono text-slate-400">Current Phase:</label>
+                <select id="engine-stage-select" onchange="updateDecisionEngine()" class="bg-[#0c0e12] text-xs font-mono text-white px-3 py-1.5 rounded-md border border-white/10 focus:outline-none focus:border-white/30 cursor-pointer">
+                  <option value="discovery">01. Discovery & Validation</option>
+                  <option value="prompting">02. Concept Prompting</option>
+                  <option value="prd">03. Scope & PRD Lite</option>
+                  <option value="schema">04. JIT Database Schema</option>
+                  <option value="backend">05. Backend Vertical Slice</option>
+                  <option value="frontend" selected>06. Frontend UI States</option>
+                  <option value="networking">07. Server, Docker & Nginx</option>
+                  <option value="deployment">08. TLS & Webhook Deployment</option>
+                  <option value="scaling">09. Telemetry & Scale Ladder</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Active Playbook Tier Directive Banner -->
+            <div id="decision-tier-banner" class="panel-inset p-3.5 border border-emerald-500/30 bg-emerald-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <span id="decision-tier-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></span>
+                <div>
+                  <span id="decision-tier-title" class="font-mono text-xs font-semibold text-emerald-300">ACTIVE DIRECTIVE &bull; 🟢 LEVEL 1: MVP MODULAR MONOLITH</span>
+                  <p id="decision-tier-desc" class="text-xs text-slate-300 font-sans mt-0.5">Strict single-process monolith. 1 vertical slice. Absolutely NO message queues, NO read replicas, NO microservices.</p>
+                </div>
+              </div>
+              <span id="decision-tier-badge" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-fit shrink-0">ZERO SPECULATIVE BLOAT</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="panel-card p-5 space-y-3">
+                <div class="flex items-center gap-2 text-xs font-mono font-medium text-slate-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                  <span class="uppercase tracking-wider">Current Objective</span>
+                </div>
+                <h4 id="engine-do-now-title" class="text-sm font-semibold text-white">Implement 7 Mandatory UI States</h4>
+                <p id="engine-do-now-desc" class="text-xs text-slate-400 leading-relaxed">Connect client view to the API mutation. Handle Loading, Error, Empty, Success feedback, and responsive layout.</p>
+                <div class="pt-1">
+                  <span id="engine-do-now-badge" class="inline-block px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 text-[11px] font-mono">Scope: 1 Screen, 7 UI States</span>
+                </div>
+              </div>
+
+              <div class="panel-card p-5 space-y-3">
+                <div class="flex items-center gap-2 text-xs font-mono font-medium text-slate-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                  <span class="uppercase tracking-wider">Blocking Prerequisite</span>
+                </div>
+                <h4 id="engine-blocker-title" class="text-sm font-semibold text-white">Incomplete API contract</h4>
+                <p id="engine-blocker-desc" class="text-xs text-slate-400 leading-relaxed">Confirm the exact JSON response and error shapes before constructing view components.</p>
+                <div class="pt-1">
+                  <span id="engine-blocker-badge" class="inline-block px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 text-[11px] font-mono">Gate: Locked API schema</span>
+                </div>
+              </div>
+
+              <div class="panel-card p-5 space-y-3">
+                <div class="flex items-center gap-2 text-xs font-mono font-medium text-slate-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                  <span class="uppercase tracking-wider">Restricted Scope (Kill List)</span>
+                </div>
+                <h4 class="text-sm font-semibold text-white">Excluded from Current Phase</h4>
+                <ul id="engine-kill-list" class="text-xs text-slate-400 space-y-1.5">
+                  <li class="flex items-start gap-2"><span class="text-rose-400/80 mt-0.5">&times;</span><span>Multi-day color palette adjustments</span></li>
+                  <li class="flex items-start gap-2"><span class="text-rose-400/80 mt-0.5">&times;</span><span>Building unreachable secondary sub-pages</span></li>
+                </ul>
+                <div class="text-[10px] text-slate-500 font-mono pt-1">Enforced to prevent premature abstraction</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. PROMPT MATRIX -->
+        <div id="content-prompts" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="border-b border-white/[0.06] pb-4">
+              <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Agent Prompting Framework</div>
+              <h3 class="text-xl font-semibold text-white tracking-tight">Staged AI Prompt Matrix</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Prompt coding agents in rigid sequential gates to prevent hallucinations and mass refactorings.</p>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 border-b border-white/[0.06] pb-3 font-mono text-xs">
+              <button onclick="selectPromptTab('stage1')" id="tab-stage1" class="px-3 py-1.5 rounded-md bg-[#1d222b] text-white border border-white/10 font-medium transition">01. Product Architect</button>
+              <button onclick="selectPromptTab('stage2')" id="tab-stage2" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">02. Technical Architect</button>
+              <button onclick="selectPromptTab('stage3')" id="tab-stage3" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">03. Vertical Slice</button>
+              <button onclick="selectPromptTab('stageDebug')" id="tab-stageDebug" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">04. Bug Isolation</button>
+            </div>
+
+            <div class="panel-inset p-4 space-y-3">
+              <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                <span id="prompt-card-title" class="font-mono text-xs font-semibold text-slate-300">Stage 1: Functional Scope & Boundary Prompt</span>
+                <button onclick="copyActivePrompt()" class="font-mono text-xs px-2.5 py-1 rounded bg-[#181b23] hover:bg-[#20242f] text-slate-300 border border-white/10 flex items-center gap-1.5 transition">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  <span id="copy-btn-text">Copy Prompt</span>
+                </button>
+              </div>
+              <pre id="active-prompt-code" class="text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed overflow-x-auto max-h-72 selection:bg-white/20">Analyze this product concept: [INSERT RAW PRODUCT IDEA]
+
+Generate:
+1. Target Customer Profile (who experiences this bottleneck daily?)
+2. Core Problem & Unfair Alternative (how is this solved today in spreadsheets/manual tasks?)
+3. Single Primary Journey (1 unbroken happy path from sign-in to core value)
+4. MVP Scope & The Kill List (5 specific features strictly EXCLUDED from V1)
+5. Validation Metric (the single verifiable metric confirming customer demand)
+
+STRICT RULE: Do not generate code, schemas, or tech stack recommendations. Output the functional brief only.</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. KILL LIST -->
+        <div id="content-kill-list" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="border-b border-white/[0.06] pb-4">
+              <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Scope Discipline</div>
+              <h3 class="text-xl font-semibold text-white tracking-tight">MVP Scope Exclusion Policy (Kill List)</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Features strictly prohibited prior to product-market validation and initial paying customers.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 font-mono text-xs">
+              <div class="panel-card p-4 space-y-2 border-l-2 border-l-rose-500/40">
+                <div class="font-semibold text-white text-xs">Native Mobile App</div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">Responsive web meets 99% of early customer needs without App Store review delays.</p>
+              </div>
+              <div class="panel-card p-4 space-y-2 border-l-2 border-l-rose-500/40">
+                <div class="font-semibold text-white text-xs">Microservices / Kubernetes</div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">Introduces distributed latency and network failure modes before single-host CPU saturates.</p>
+              </div>
+              <div class="panel-card p-4 space-y-2 border-l-2 border-l-rose-500/40">
+                <div class="font-semibold text-white text-xs">Predictive AI Recommendations</div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">Requires substantial user data volume to be statistically meaningful.</p>
+              </div>
+              <div class="panel-card p-4 space-y-2 border-l-2 border-l-rose-500/40">
+                <div class="font-semibold text-white text-xs">Multi-Tenant Custom Domains</div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">Requires complex dynamic TLS proxy infrastructure (Caddy / Cloudflare for SaaS).</p>
+              </div>
+              <div class="panel-card p-4 space-y-2 border-l-2 border-l-rose-500/40">
+                <div class="font-semibold text-white text-xs">Multi-Currency Dynamic Conversion</div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">Introduces foreign exchange reconciliation overhead before validating single-currency pricing.</p>
+              </div>
+              <div class="panel-card p-4 space-y-2 border-l-2 border-l-rose-500/40">
+                <div class="font-semibold text-white text-xs">Granular Team Role Matrices</div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">Simple Owner / Member permissions suffice for initial company accounts.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. TECH STACK ARSENAL -->
+        <div id="content-arsenal" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+              <div>
+                <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Stack Architecture &bull; Deep-Dives</div>
+                <h3 class="text-xl font-semibold text-white tracking-tight">Curated Technology Arsenal</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Click any technology to inspect rationale, copyable configuration snippets, and mandatory production rules.</p>
+              </div>
+              <div class="flex items-center gap-1 bg-[#0c0e12] p-1 rounded-md border border-white/10 font-mono text-xs">
+                <button onclick="filterArsenal('all')" class="px-2.5 py-1 rounded bg-[#1d222b] text-white">All (12)</button>
+                <button onclick="filterArsenal('mvp')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200">MVP</button>
+                <button onclick="filterArsenal('prod')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200">Production</button>
+              </div>
+            </div>
+
+            <!-- Tech Selector Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 font-mono text-xs">
+              <button onclick="inspectTech('nextjs')" id="btn-tech-nextjs" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/20 bg-[#1c222c] text-white text-left transition">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 180 180" fill="none"><circle cx="90" cy="90" r="90" fill="#000"/><path d="M149.5 157.4L69.1 54H54v72h12.1V69.4l73.9 95.4c3.3-2.2 6.5-4.7 9.5-7.4z" fill="#fff"/><path d="M115.8 54h12.1v50.7l-12.1-15.5V54z" fill="#fff"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Next.js 14</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Framework</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('postgres')" id="btn-tech-postgres" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">PostgreSQL</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Database</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('prisma')" id="btn-tech-prisma" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-teal-300 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20L13.5 2.5a.5.5 0 01.9.1L20 20l-8-3-8 3z"/><path d="M12 17V3"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Prisma</div>
+                  <div class="text-[10px] text-slate-500 uppercase">ORM</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('redis')" id="btn-tech-redis" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Redis</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Cache</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('docker')" id="btn-tech-docker" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-cyan-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10h2v2H4zM7 10h2v2H7zM10 10h2v2h-2zM7 7h2v2H7zM10 7h2v2h-2zM13 7h2v2h-2z"/><path d="M2 13h19c.6 0 1 .4 1 1 0 4-3 7-8 7-4 0-7-2-8-5l-4-3z"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Docker</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Infra</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('nginx')" id="btn-tech-nginx" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><path d="M9 16V8l6 8V8"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Nginx</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Gateway</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('cloudflare')" id="btn-tech-cloudflare" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-orange-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19H9a7 7 0 116.71-9h1.79a4.5 4.5 0 010 9z"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Cloudflare</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Edge</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('stripe')" id="btn-tech-stripe" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="#635BFF"/><path d="M14.6 10.6c0-.9-.7-1.3-1.8-1.3-1.6 0-3.6.5-5.2 1.4V7.5c1.7-.7 3.5-1 5.2-1 3.5 0 5.8 1.8 5.8 4.7 0 4.6-6.3 3.9-6.3 5.9 0 1 .9 1.4 2.1 1.4 1.9 0 4.2-.8 5.8-1.7v3.2c-1.8.8-3.8 1.2-5.8 1.2-3.7 0-6.2-1.8-6.2-4.7 0-4.9 6.4-4.1 6.4-5.9z" fill="white"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Stripe</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Billing</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('bullmq')" id="btn-tech-bullmq" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="4" rx="1"/><rect x="2" y="11" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">BullMQ</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Queue</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('typescript')" id="btn-tech-typescript" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 128 128" fill="none"><rect width="128" height="128" rx="16" fill="#3178C6"/><path d="M74.1 82.5c1.8 3.1 4.5 5.7 8.3 7.5 3.8 1.8 8.1 2.7 13 2.7 4.2 0 7.8-.7 10.9-2.2 3.1-1.5 5.5-3.6 7.2-6.3 1.7-2.7 2.6-5.8 2.6-9.4 0-3.4-.8-6.3-2.5-8.8s-3.9-4.5-6.8-6.1c-2.9-1.6-6.4-3-10.7-4.3-3.6-1.1-6.5-2.2-8.7-3.3-2.2-1.1-3.9-2.4-5.1-3.9-1.2-1.5-1.8-3.3-1.8-5.4 0-2.3.7-4.3 2.1-5.9 1.4-1.6 3.3-2.8 5.7-3.6 2.4-.8 5.1-1.2 8.1-1.2 3.9 0 7.3.7 10.2 2.2 2.9 1.5 5.2 3.5 6.9 6.1l9.6-6.3c-2.6-4.1-6.2-7.2-10.9-9.5-4.7-2.3-10-3.4-15.9-3.4-5.6 0-10.6 1-14.9 3.1s-7.8 5-10.2 8.8c-2.4 3.8-3.6 8.3-3.6 13.5 0 4.9 1.1 9 3.4 12.4 2.3 3.4 5.3 6.1 9.1 8.1s8.4 3.7 13.7 5.2c3.7 1.1 6.8 2.2 9.2 3.4 2.4 1.2 4.2 2.6 5.5 4.3 1.3 1.7 1.9 3.8 1.9 6.3 0 2.6-.8 4.8-2.3 6.6-1.5 1.8-3.7 3.2-6.4 4.1-2.7.9-5.9 1.4-9.5 1.4-5.2 0-9.6-1.1-13.3-3.4-3.7-2.3-6.4-5.7-8.2-10.2L74.1 82.5zM48 37.6v68.8H34.4V37.6H13.6V26.4h55.2v11.2H48z" fill="white"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">TypeScript</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Language</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('tailwind')" id="btn-tech-tailwind" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none"><path d="M12 4.8c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.9.2 1.6.9 2.3 1.6C13.7 10.6 15 12 18 12c3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.9-.2-1.6-.9-2.3-1.6C16.3 6.2 15 4.8 12 4.8zm-6 7.2c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.9.2 1.6.9 2.3 1.6 1.2 1.2 2.5 2.6 5.5 2.6 3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.9-.2-1.6-.9-2.3-1.6-1.2-1.2-2.5-2.6-5.5-2.6z" fill="#38BDF8"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Tailwind CSS</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Styling</div>
+                </div>
+              </button>
+              <button onclick="inspectTech('vitest')" id="btn-tech-vitest" class="tech-select-btn flex items-center gap-2 p-2.5 rounded-md border border-white/5 bg-[#12151c] text-slate-400 hover:text-white hover:border-white/15 text-left transition">
+                <svg class="w-4 h-4 text-lime-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 15 10-15-10-5z"/><path d="M12 7v8"/></svg>
+                <div class="truncate">
+                  <div class="font-semibold text-xs text-white">Vitest</div>
+                  <div class="text-[10px] text-slate-500 uppercase">Testing</div>
+                </div>
+              </button>
+            </div>
+
+            <!-- Deep-Dive Spec Card -->
+            <div id="tech-detail-card" class="panel-card p-5 space-y-4 border-white/20 bg-[#141720]">
+              <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                <div class="flex items-center gap-3">
+                  <span id="tech-detail-badge" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded border text-emerald-400 border-emerald-500/30 bg-emerald-500/10">MVP TIER</span>
+                  <h4 id="tech-detail-name" class="text-base font-semibold text-white">Next.js 14 (App Router)</h4>
+                  <span id="tech-detail-cat" class="text-[11px] font-mono text-slate-400">Framework</span>
+                </div>
+              </div>
+
+              <!-- Concept Banner -->
+              <div class="panel-inset p-3.5 border border-white/5 space-y-1">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400 block">Architecture Mental Model</span>
+                <p id="tech-detail-concept" class="text-slate-200 font-sans text-xs leading-relaxed">Unified client and server runtime. Server Components stream initial HTML from Node.js with direct database access without exposing secret keys.</p>
+              </div>
+
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs font-mono">
+                <!-- Left: Step-by-Step & Quick Setup -->
+                <div class="space-y-3">
+                  <div class="space-y-1.5">
+                    <span class="text-slate-500 uppercase tracking-wider text-[10px]">Step-by-Step Setup</span>
+                    <ol id="tech-detail-steps" class="space-y-1.5 list-decimal list-inside text-slate-300 font-sans text-xs">
+                      <li>Initialize project: pnpm create next-app@14 my-app --typescript --tailwind --app</li>
+                      <li>Configure layout.tsx, page.tsx, and loading.tsx Suspense boundaries</li>
+                      <li>Create server actions in separate actions.ts files with 'use server'</li>
+                    </ol>
+                  </div>
+
+                  <div class="space-y-1 pt-2 border-t border-white/[0.04]">
+                    <div class="flex items-center justify-between">
+                      <span class="text-slate-500 uppercase tracking-wider text-[10px]">Quick Scaffold Snippet</span>
+                      <button onclick="copyTechCode()" class="text-slate-400 hover:text-white flex items-center gap-1 text-[10px] transition"><i data-lucide="copy" class="w-3 h-3"></i><span>Copy</span></button>
+                    </div>
+                    <pre class="panel-inset p-2.5 text-slate-200 text-xs overflow-x-auto"><code id="tech-detail-code">pnpm create next-app@14 my-app --typescript --tailwind --app</code></pre>
+                  </div>
+                </div>
+
+                <!-- Right: Commands & Rules -->
+                <div class="space-y-3">
+                  <div class="space-y-1.5">
+                    <span class="text-slate-500 uppercase tracking-wider text-[10px]">Operational Commands</span>
+                    <div id="tech-detail-commands" class="space-y-1.5">
+                      <div class="p-2 rounded bg-[#090a0d] border border-white/5 space-y-1 font-mono text-[11px]">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] px-1.5 py-0.2 rounded border uppercase text-emerald-400 border-emerald-500/30">READ</span>
+                          <button onclick="copyText('pnpm dev')" class="text-slate-400 hover:text-white text-[10px]">Copy</button>
+                        </div>
+                        <code class="text-slate-200 block truncate">pnpm dev</code>
+                        <div class="text-[10px] text-slate-500 font-sans">Runs local dev server on :3000</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="space-y-1 border-t border-white/[0.04] pt-2">
+                    <span class="text-slate-500 uppercase tracking-wider text-[10px]">Battle-Tested Rules</span>
+                    <ul id="tech-detail-rules" class="space-y-1 text-slate-300 font-sans text-xs">
+                      <li class="flex items-start gap-1.5"><span class="text-emerald-400">✓</span><span>Keep Server Actions strictly in separate actions.ts files.</span></li>
+                      <li class="flex items-start gap-1.5"><span class="text-emerald-400">✓</span><span>Validate all action inputs with Zod schemas.</span></li>
+                    </ul>
+                  </div>
+
+                  <div class="space-y-1 border-t border-white/[0.04] pt-2">
+                    <span class="text-rose-400 uppercase tracking-wider text-[10px]">Common Pitfall</span>
+                    <p id="tech-detail-pitfall" class="text-slate-400 font-sans text-xs leading-relaxed">Client bundle bloat from accidentally importing Node native libraries in 'use client' components.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. TOPOLOGY -->
+        <div id="content-topology" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="border-b border-white/[0.06] pb-4">
+              <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Topology Matrix</div>
+              <h3 class="text-xl font-semibold text-white tracking-tight">Architecture Specifications by Tier</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Select architecture based on verified load and risk profile. Complexity must be earned, never assumed.</p>
+              
+              <!-- Tech Badges -->
+              <div class="flex flex-wrap items-center gap-2 pt-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Stack:</span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 180 180" fill="none"><circle cx="90" cy="90" r="90" fill="#000"/><path d="M149.5 157.4L69.1 54H54v72h12.1V69.4l73.9 95.4c3.3-2.2 6.5-4.7 9.5-7.4z" fill="#fff"/><path d="M115.8 54h12.1v50.7l-12.1-15.5V54z" fill="#fff"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Next.js 14</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; App Router Monolith</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                  <span class="font-semibold text-white text-[11px]">PostgreSQL 16</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Relational Storage</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Redis</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; In-Memory Cache</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10h2v2H4zM7 10h2v2H7zM10 10h2v2h-2zM7 7h2v2H7zM10 7h2v2h-2zM13 7h2v2h-2z"/><path d="M2 13h19c.6 0 1 .4 1 1 0 4-3 7-8 7-4 0-7-2-8-5l-4-3z"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Docker</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Container Isolation</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div id="topo-card-mvp" class="panel-card p-5 space-y-4 border-emerald-500/40 bg-[#16211a] ring-1 ring-emerald-500/30 transition-all duration-200">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                      <span class="font-mono text-xs font-semibold text-white">LEVEL 1 &bull; MVP</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400">Modular Monolith</span>
+                  </div>
+                  <span class="text-xs font-mono text-slate-400">$0 – $15/mo</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Minimal surface area. Single deployment pipeline with direct database transactions.</p>
+                <div class="panel-inset p-3 font-mono text-xs text-center space-y-1.5 text-slate-300">
+                  <div class="py-1 px-2 rounded bg-white/5 border border-white/5">Client &amp; Server (Next.js App)</div>
+                  <div class="text-slate-600 text-[10px]">&darr; direct Prisma client</div>
+                  <div class="py-1 px-2 rounded bg-white/5 border border-white/5">PostgreSQL (Supabase / Single Container)</div>
+                </div>
+                <ul class="text-xs space-y-2 text-slate-300">
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>Single runtime process / Actions</span></li>
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>HttpOnly Session authorization</span></li>
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>Direct database queries</span></li>
+                </ul>
+              </div>
+
+              <div id="topo-card-prod" class="panel-card p-5 space-y-4 opacity-50 hover:opacity-100 transition-all duration-200">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                      <span class="font-mono text-xs font-semibold text-white">LEVEL 2 &bull; PRODUCTION</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400">Decoupled Resilience</span>
+                  </div>
+                  <span class="text-xs font-mono text-slate-400">$50 – $150/mo</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Asynchronous background workers, error telemetry, and in-memory rate limiting.</p>
+                <div class="panel-inset p-3 font-mono text-xs text-center space-y-1.5 text-slate-300">
+                  <div class="py-1 px-2 rounded bg-white/5 border border-white/5">Nginx Gateway (SSL + Reverse Proxy)</div>
+                  <div class="text-slate-600 text-[10px]">&darr; forward :3000</div>
+                  <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+                    <div class="py-1 px-1.5 rounded bg-white/5 border border-white/5 text-[11px]">PostgreSQL</div>
+                    <div class="py-1 px-1.5 rounded bg-white/5 border border-white/5 text-[11px]">Redis + BullMQ</div>
+                  </div>
+                </div>
+                <ul class="text-xs space-y-2 text-slate-300">
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i><span>Redis cache &amp; rate limiting</span></li>
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i><span>BullMQ async worker queue</span></li>
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i><span>S3/R2 presigned storage uploads</span></li>
+                </ul>
+              </div>
+
+              <div id="topo-card-ent" class="panel-card p-5 space-y-4 opacity-50 hover:opacity-100 transition-all duration-200">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                      <span class="font-mono text-xs font-semibold text-white">LEVEL 3 &bull; ENTERPRISE</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400">High Availability</span>
+                  </div>
+                  <span class="text-xs font-mono text-slate-400">$1,000+/mo</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Zero single point of failure. Multi-AZ compute, read replicas, and compliance audits.</p>
+                <div class="panel-inset p-3 font-mono text-xs text-center space-y-1.5 text-slate-300">
+                  <div class="py-1 px-2 rounded bg-white/5 border border-white/5 text-[11px]">Cloudflare Anycast + AWS ALB</div>
+                  <div class="text-slate-600 text-[10px]">&darr; round-robin cluster</div>
+                  <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+                    <div class="py-1 px-1.5 rounded bg-white/5 border border-white/5 text-[10px]">Primary DB (Write)</div>
+                    <div class="py-1 px-1.5 rounded bg-white/5 border border-white/5 text-[10px]">Replica DB (Read)</div>
+                  </div>
+                </div>
+                <ul class="text-xs space-y-2 text-slate-300">
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-rose-400"></i><span>SAML 2.0 / SSO integration</span></li>
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-rose-400"></i><span>Immutable audit logs &amp; RLS</span></li>
+                  <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-rose-400"></i><span>Blue-green deployment pipeline</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. PACKET PATH -->
+        <div id="content-network" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+              <div>
+                <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Infrastructure Mental Model</div>
+                <h3 class="text-xl font-semibold text-white tracking-tight">Production Packet Path Architecture</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Click any node in the request lifecycle to inspect its technical role and diagnostic commands.</p>
+                
+                <!-- Tech Badges -->
+                <div class="flex flex-wrap items-center gap-2 pt-2.5">
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Stack:</span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19H9a7 7 0 116.71-9h1.79a4.5 4.5 0 010 9z"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Cloudflare</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Edge DNS &amp; WAF</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><path d="M9 16V8l6 8V8"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Nginx</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Reverse Proxy</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 15h8M9 9h.01M15 9h.01M10 12a2 2 0 004 0"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Linux UFW</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Packet Firewall</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Let's Encrypt</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; TLS 1.3 SSL</span>
+                  </span>
+                </div>
+              </div>
+              <button onclick="triggerPacketAnimation()" class="font-mono text-xs px-3 py-1.5 rounded-md bg-[#181b23] hover:bg-[#20242f] text-slate-300 border border-white/10 flex items-center gap-2 transition">
+                <i data-lucide="play" class="w-3 h-3 text-cyan-400"></i>
+                <span>Execute Traceroute</span>
+              </button>
+            </div>
+
+            <div class="panel-inset p-5 space-y-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
+                <div id="net-node-user" onclick="inspectNetworkNode('user')" class="panel-card p-3.5 cursor-pointer space-y-1.5">
+                  <div class="flex items-center justify-between text-slate-500 text-[10px]"><span>01. ORIGIN</span><i data-lucide="smartphone" class="w-3.5 h-3.5"></i></div>
+                  <div class="font-semibold text-white text-xs">Client Browser</div>
+                  <div class="text-[11px] text-slate-400">yourdomain.com</div>
+                </div>
+                <div id="net-node-dns" onclick="inspectNetworkNode('dns')" class="panel-card p-3.5 cursor-pointer space-y-1.5">
+                  <div class="flex items-center justify-between text-slate-500 text-[10px]"><span>02. ROUTING</span><i data-lucide="globe" class="w-3.5 h-3.5"></i></div>
+                  <div class="font-semibold text-white text-xs">DNS Resolver</div>
+                  <div class="text-[11px] text-slate-400">A Record &rarr; IP</div>
+                </div>
+                <div id="net-node-firewall" onclick="inspectNetworkNode('firewall')" class="panel-card p-3.5 cursor-pointer space-y-1.5">
+                  <div class="flex items-center justify-between text-slate-500 text-[10px]"><span>03. PERIMETER</span><i data-lucide="shield" class="w-3.5 h-3.5"></i></div>
+                  <div class="font-semibold text-white text-xs">Linux Firewall</div>
+                  <div class="text-[11px] text-slate-400">UFW :80 & :443</div>
+                </div>
+                <div id="net-node-nginx" onclick="inspectNetworkNode('nginx')" class="panel-card p-3.5 cursor-pointer space-y-1.5 border-white/30 bg-[#1e222c]">
+                  <div class="flex items-center justify-between text-slate-500 text-[10px]"><span>04. GATEWAY</span><i data-lucide="server" class="w-3.5 h-3.5"></i></div>
+                  <div class="font-semibold text-white text-xs">Nginx Proxy</div>
+                  <div class="text-[11px] text-slate-400">TLS &rarr; :3000</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono pt-1">
+                <div id="net-node-docker" onclick="inspectNetworkNode('docker')" class="panel-card p-3.5 cursor-pointer space-y-1.5">
+                  <div class="flex items-center justify-between text-slate-500 text-[10px]"><span>05. ISOLATION</span><i data-lucide="box" class="w-3.5 h-3.5"></i></div>
+                  <div class="font-semibold text-white text-xs">Docker Bridge</div>
+                  <div class="text-[11px] text-slate-400">172.18.0.0/16 Subnet</div>
+                </div>
+                <div id="net-node-app" onclick="inspectNetworkNode('app')" class="panel-card p-3.5 cursor-pointer space-y-1.5">
+                  <div class="flex items-center justify-between text-slate-500 text-[10px]"><span>06. COMPUTE</span><i data-lucide="cpu" class="w-3.5 h-3.5"></i></div>
+                  <div class="font-semibold text-white text-xs">Node / Nest App</div>
+                  <div class="text-[11px] text-slate-400">Internal Port :3000</div>
+                </div>
+                <div id="net-node-db" onclick="inspectNetworkNode('db')" class="panel-card p-3.5 cursor-pointer space-y-1.5">
+                  <div class="flex items-center justify-between text-slate-500 text-[10px]"><span>07. PERSISTENCE</span><i data-lucide="database" class="w-3.5 h-3.5"></i></div>
+                  <div class="font-semibold text-white text-xs">PostgreSQL Store</div>
+                  <div class="text-[11px] text-slate-400">Internal Port :5432</div>
+                </div>
+              </div>
+
+              <div class="panel-card p-4 space-y-3 mt-4">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                  <span id="net-detail-title" class="font-mono text-xs font-semibold text-white">4. Nginx Reverse Proxy & TLS Termination</span>
+                  <span id="net-detail-badge" class="font-mono text-[10px] text-slate-400 bg-white/5 px-2 py-0.5 rounded">Edge Gateway</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div class="space-y-1">
+                    <span class="text-slate-500 font-mono text-[10px] uppercase">Functional Role</span>
+                    <p id="net-detail-what" class="text-slate-300 leading-relaxed">High-performance web server terminating SSL/TLS certificates and proxying requests to internal ports.</p>
+                  </div>
+                  <div class="space-y-1">
+                    <span class="text-slate-500 font-mono text-[10px] uppercase">Vulnerability Avoided</span>
+                    <p id="net-detail-why" class="text-slate-300 leading-relaxed">Protects application runtimes from slow-client attacks, terminates TLS efficiently, and handles gzip/brotli compression.</p>
+                  </div>
+                  <div class="space-y-1">
+                    <span class="text-slate-500 font-mono text-[10px] uppercase">Verification Command</span>
+                    <div id="net-detail-cmd" class="panel-inset p-2 font-mono text-xs text-slate-200 overflow-x-auto">sudo nginx -t && sudo systemctl status nginx</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. DEVOPS COMMANDS -->
+        <div id="content-commands" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+              <div>
+                <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">DevOps Command Reference</div>
+                <h3 class="text-xl font-semibold text-white tracking-tight">Verified Infrastructure Commands</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Classified by operational blast radius to prevent destructive administrative mistakes.</p>
+                
+                <!-- Tech Badges -->
+                <div class="flex flex-wrap items-center gap-2 pt-2.5">
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Stack:</span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10h2v2H4zM7 10h2v2H7zM10 10h2v2h-2zM7 7h2v2H7zM10 7h2v2h-2zM13 7h2v2h-2z"/><path d="M2 13h19c.6 0 1 .4 1 1 0 4-3 7-8 7-4 0-7-2-8-5l-4-3z"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Docker CLI</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Container Runtime</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 15h8M9 9h.01M15 9h.01M10 12a2 2 0 004 0"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Ubuntu / Linux</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Host OS &amp; Systemd</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Bash</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Shell Automation</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-slate-300" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                    <span class="font-semibold text-white text-[11px]">GitHub Actions</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Automated CI/CD</span>
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 bg-[#0c0e12] p-1 rounded-md border border-white/10 font-mono text-xs">
+                <button onclick="filterCommands('all')" class="px-2.5 py-1 rounded bg-[#1d222b] text-white">All</button>
+                <button onclick="filterCommands('docker')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200">Docker</button>
+                <button onclick="filterCommands('network')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200">Network</button>
+                <button onclick="filterCommands('system')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200">System</button>
+                <button onclick="filterCommands('hazardous')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200">Hazard</button>
+              </div>
+            </div>
+
+            <div id="commands-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div class="cmd-item panel-card p-4 space-y-2.5 flex flex-col justify-between" data-category="docker">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded border text-slate-400 border-white/10">READ &bull; DOCKER</span>
+                    <button onclick="copyText('docker ps -a')" class="text-slate-400 hover:text-white transition"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                  <code class="block font-mono text-xs text-slate-200 bg-[#090a0d] p-2 rounded border border-white/5">docker ps -a</code>
+                  <p class="text-xs text-slate-400 leading-relaxed">Lists all running and terminated containers, uptime status, and bound ports.</p>
+                </div>
+                <div class="text-[11px] font-mono text-slate-500 pt-2 border-t border-white/[0.04]">Verify whether the application or database crashed.</div>
+              </div>
+
+              <div class="cmd-item panel-card p-4 space-y-2.5 flex flex-col justify-between" data-category="docker">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded border text-slate-400 border-white/10">READ &bull; DOCKER</span>
+                    <button onclick="copyText('docker logs -f --tail 100 app_container')" class="text-slate-400 hover:text-white transition"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                  <code class="block font-mono text-xs text-slate-200 bg-[#090a0d] p-2 rounded border border-white/5">docker logs -f --tail 100 app_container</code>
+                  <p class="text-xs text-slate-400 leading-relaxed">Streams real-time stdout and stderr output from the target container.</p>
+                </div>
+                <div class="text-[11px] font-mono text-slate-500 pt-2 border-t border-white/[0.04]">Investigating 500-level HTTP responses or unhandled exceptions.</div>
+              </div>
+
+              <div class="cmd-item panel-card p-4 space-y-2.5 flex flex-col justify-between" data-category="network">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded border text-amber-400 border-amber-500/20">WRITE &bull; NETWORK</span>
+                    <button onclick="copyText('sudo ufw allow 80/tcp && sudo ufw allow 443/tcp')" class="text-slate-400 hover:text-white transition"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                  <code class="block font-mono text-xs text-slate-200 bg-[#090a0d] p-2 rounded border border-white/5">sudo ufw allow 80/tcp && sudo ufw allow 443/tcp</code>
+                  <p class="text-xs text-slate-400 leading-relaxed">Applies firewall rules permitting inbound traffic on web ports.</p>
+                </div>
+                <div class="text-[11px] font-mono text-slate-500 pt-2 border-t border-white/[0.04]">Enabling public web ingress. Ensure port 22 is permitted first.</div>
+              </div>
+
+              <div class="cmd-item panel-card p-4 space-y-2.5 flex flex-col justify-between" data-category="network">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded border text-slate-400 border-white/10">READ &bull; NETWORK</span>
+                    <button onclick="copyText('ss -tuln | grep -E \':(80|443|3000|5432)\'')" class="text-slate-400 hover:text-white transition"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                  <code class="block font-mono text-xs text-slate-200 bg-[#090a0d] p-2 rounded border border-white/5">ss -tuln | grep -E ':(80|443|3000|5432)'</code>
+                  <p class="text-xs text-slate-400 leading-relaxed">Scans kernel socket table for active TCP listeners on specified ports.</p>
+                </div>
+                <div class="text-[11px] font-mono text-slate-500 pt-2 border-t border-white/[0.04]">Resolving 'Address already in use' conflicts.</div>
+              </div>
+
+              <div class="cmd-item panel-card p-4 space-y-2.5 flex flex-col justify-between" data-category="hazardous">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded border text-rose-400 border-rose-500/30">DESTRUCTIVE &bull; SYSTEM</span>
+                    <button onclick="copyText('docker system prune -a --volumes')" class="text-slate-400 hover:text-white transition"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                  <code class="block font-mono text-xs text-slate-200 bg-[#090a0d] p-2 rounded border border-white/5">docker system prune -a --volumes</code>
+                  <p class="text-xs text-slate-400 leading-relaxed">Removes ALL unattached containers, networks, images, and named storage volumes.</p>
+                </div>
+                <div class="text-[11px] font-mono text-slate-500 pt-2 border-t border-white/[0.04]">Hazard: Will wipe unbacked persistent database disks.</div>
+              </div>
+
+              <div class="cmd-item panel-card p-4 space-y-2.5 flex flex-col justify-between" data-category="system">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded border text-slate-400 border-white/10">READ &bull; SYSTEM</span>
+                    <button onclick="copyText('journalctl -u nginx -n 50 --no-pager')" class="text-slate-400 hover:text-white transition"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                  <code class="block font-mono text-xs text-slate-200 bg-[#090a0d] p-2 rounded border border-white/5">journalctl -u nginx -n 50 --no-pager</code>
+                  <p class="text-xs text-slate-400 leading-relaxed">Reads the 50 most recent systemd service logs for the Nginx daemon.</p>
+                </div>
+                <div class="text-[11px] font-mono text-slate-500 pt-2 border-t border-white/[0.04]">Diagnosing 502 Bad Gateway errors or TLS handshake failures.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. RUNBOOKS -->
+        <div id="content-recipes" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="border-b border-white/[0.06] pb-4">
+              <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Operational Runbooks</div>
+              <h3 class="text-xl font-semibold text-white tracking-tight">Production Deployment Runbooks</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Deterministic execution procedures for infrastructure deployment and payment webhook verification.</p>
+              
+              <!-- Tech Badges -->
+              <div class="flex flex-wrap items-center gap-2 pt-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Stack:</span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10h2v2H4zM7 10h2v2H7zM10 10h2v2h-2zM7 7h2v2H7zM10 7h2v2h-2zM13 7h2v2h-2z"/><path d="M2 13h19c.6 0 1 .4 1 1 0 4-3 7-8 7-4 0-7-2-8-5l-4-3z"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Docker Compose</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Multi-Container</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="#635BFF"/><path d="M14.6 10.6c0-.9-.7-1.3-1.8-1.3-1.6 0-3.6.5-5.2 1.4V7.5c1.7-.7 3.5-1 5.2-1 3.5 0 5.8 1.8 5.8 4.7 0 4.6-6.3 3.9-6.3 5.9 0 1 .9 1.4 2.1 1.4 1.9 0 4.2-.8 5.8-1.7v3.2c-1.8.8-3.8 1.2-5.8 1.2-3.7 0-6.2-1.8-6.2-4.7 0-4.9 6.4-4.1 6.4-5.9z" fill="white"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Stripe CLI</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Webhook Forwarder</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Certbot</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Let's Encrypt SSL</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+              <div class="panel-card p-5 space-y-3">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                  <span class="font-semibold text-white flex items-center gap-2">
+                    <i data-lucide="server" class="w-4 h-4 text-slate-400"></i>
+                    <span>Ubuntu Host &bull; Docker &bull; Nginx &bull; TLS</span>
+                  </span>
+                  <span class="text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded">RUNBOOK 01</span>
+                </div>
+                <ol class="text-slate-400 space-y-2 list-decimal list-inside leading-relaxed">
+                  <li>Install Docker Engine: <code class="text-slate-200">curl -fsSL https://get.docker.com | sh</code></li>
+                  <li>Clone repository into <code class="text-slate-300">/var/www/app</code></li>
+                  <li>Define production environment variables in <code class="text-slate-300">.env.production</code></li>
+                  <li>Launch stack: <code class="text-slate-200">docker compose up -d --build</code></li>
+                  <li>Automate TLS renewal: <code class="text-slate-200">sudo certbot --nginx -d yourdomain.com</code></li>
+                </ol>
+              </div>
+
+              <div class="panel-card p-5 space-y-3">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                  <span class="font-semibold text-white flex items-center gap-2">
+                    <i data-lucide="credit-card" class="w-4 h-4 text-slate-400"></i>
+                    <span>Payment Webhook Idempotency &bull; Stripe / KHQR</span>
+                  </span>
+                  <span class="text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded">RUNBOOK 02</span>
+                </div>
+                <ol class="text-slate-400 space-y-2 list-decimal list-inside leading-relaxed">
+                  <li>Preserve raw request buffer before JSON parsing for HMAC validation</li>
+                  <li>Verify signature: <code class="text-slate-200">stripe.webhooks.constructEvent(...)</code></li>
+                  <li>Check database idempotency table for event ID before processing</li>
+                  <li>If event ID already recorded, immediately return HTTP 200</li>
+                  <li>Execute account state mutation within single database transaction</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8. TRIAGE -->
+        <div id="content-troubleshoot" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+              <div>
+                <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">System Triage Protocol</div>
+                <h3 class="text-xl font-semibold text-white tracking-tight">Infrastructure Diagnostic Ladder</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Sequential diagnostic check to isolate broken layers from DNS down to database sockets.</p>
+                
+                <!-- Tech Badges -->
+                <div class="flex flex-wrap items-center gap-2 pt-2.5">
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Stack:</span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Systemd</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Daemon Supervisor</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10h2v2H4zM7 10h2v2H7zM10 10h2v2h-2zM7 7h2v2H7zM10 7h2v2h-2zM13 7h2v2h-2z"/><path d="M2 13h19c.6 0 1 .4 1 1 0 4-3 7-8 7-4 0-7-2-8-5l-4-3z"/></svg>
+                    <span class="font-semibold text-white text-[11px]">Docker CLI</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Container Logs</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    <span class="font-semibold text-white text-[11px]">cURL / Ping</span>
+                    <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Socket Probing</span>
+                  </span>
+                </div>
+              </div>
+              <button onclick="resetTroubleshooter()" class="text-xs text-slate-400 hover:text-white font-mono px-2.5 py-1 rounded bg-[#181b23] border border-white/10 flex items-center gap-1.5 transition w-fit">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span>Reset Diagnostic</span>
+              </button>
+            </div>
+
+            <div class="panel-inset p-5 space-y-4">
+              <div class="flex items-center justify-between font-mono text-xs text-slate-400">
+                <span id="triage-step-number">STEP 1 OF 6</span>
+                <span class="text-[11px] text-slate-500">Host Probe Test</span>
+              </div>
+
+              <h4 id="triage-step-question" class="text-sm font-semibold text-white">Does the domain name resolve to your host server's public IP?</h4>
+
+              <div class="panel-card p-3 font-mono text-xs space-y-1">
+                <span class="text-slate-500 text-[10px] uppercase block">Execute on terminal</span>
+                <code id="triage-step-cmd" class="text-slate-200 block">nslookup yourdomain.com</code>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 font-mono text-xs">
+                <button onclick="handleTriageAnswer(true)" class="p-3 rounded-md bg-[#181e1a] hover:bg-[#202923] border border-emerald-500/30 text-emerald-300 font-medium flex items-center justify-center gap-2 transition">
+                  <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                  <span>Pass &bull; Expected Response</span>
+                </button>
+                <button onclick="handleTriageAnswer(false)" class="p-3 rounded-md bg-[#241819] hover:bg-[#2e1f20] border border-rose-500/30 text-rose-300 font-medium flex items-center justify-center gap-2 transition">
+                  <i data-lucide="x" class="w-4 h-4 text-rose-400"></i>
+                  <span>Fail &bull; Timeout or Error</span>
+                </button>
+              </div>
+
+              <div id="triage-result-box" class="hidden mt-4 p-4 rounded-md bg-[#13161d] border border-white/10 space-y-2 text-xs">
+                <span class="font-mono text-[11px] text-slate-400 uppercase tracking-wider block">Remediation Action</span>
+                <p id="triage-result-text" class="text-slate-300 leading-relaxed"></p>
+                <div id="triage-result-code" class="panel-inset p-2.5 font-mono text-slate-200 text-xs"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 9. SCALING -->
+        <div id="content-scaling" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="border-b border-white/[0.06] pb-4">
+              <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Scaling Progression</div>
+              <h3 class="text-xl font-semibold text-white tracking-tight">System Scaling Ladder</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Scale strictly based on measured telemetry bottlenecks, not hypothetical future load.</p>
+              
+              <!-- Tech Badges -->
+              <div class="flex flex-wrap items-center gap-2 pt-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Stack:</span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Redis</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Cache &amp; PubSub</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="4" rx="1"/><rect x="2" y="11" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/></svg>
+                  <span class="font-semibold text-white text-[11px]">BullMQ</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Worker Queues</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-lime-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 15 10-15-10-5z"/><path d="M12 7v8"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Vitest</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; Unit/Integration</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161a22] border border-white/10 text-xs font-mono text-slate-300 shadow-sm">
+                  <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="12" r="6"/><circle cx="16" cy="12" r="6"/><path d="M12 6v12"/></svg>
+                  <span class="font-semibold text-white text-[11px]">Playwright</span>
+                  <span class="text-[10px] text-slate-500 hidden sm:inline">&bull; E2E Testing</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="space-y-2 font-mono text-xs">
+              <div class="panel-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-start md:items-center gap-3">
+                  <span class="w-6 h-6 rounded bg-[#181b23] border border-white/10 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">1</span>
+                  <div>
+                    <div class="font-semibold text-white text-xs">Single Host Monolith</div>
+                    <div class="text-slate-500 text-[11px]">Initial launch up to early traction</div>
+                  </div>
+                </div>
+                <div class="text-slate-400 text-xs">Co-locate app &amp; DB on single VPS ($5–$15/mo)</div>
+              </div>
+
+              <div class="panel-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-start md:items-center gap-3">
+                  <span class="w-6 h-6 rounded bg-[#181b23] border border-white/10 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">2</span>
+                  <div>
+                    <div class="font-semibold text-white text-xs">SQL Indexes &amp; Connection Pool</div>
+                    <div class="text-slate-500 text-[11px]">PostgreSQL query latency exceeding 100ms</div>
+                  </div>
+                </div>
+                <div class="text-slate-400 text-xs">Composite indexes + PgBouncer (1k–10k DAU)</div>
+              </div>
+
+              <div class="panel-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-start md:items-center gap-3">
+                  <span class="w-6 h-6 rounded bg-[#181b23] border border-white/10 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">3</span>
+                  <div>
+                    <div class="font-semibold text-white text-xs">Edge CDN &amp; Redis Cache</div>
+                    <div class="text-slate-500 text-[11px]">Repetitive static reads and dashboard loads</div>
+                  </div>
+                </div>
+                <div class="text-slate-400 text-xs">Cloudflare cache rules + Upstash Redis (10k–50k DAU)</div>
+              </div>
+
+              <div class="panel-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-start md:items-center gap-3">
+                  <span class="w-6 h-6 rounded bg-[#181b23] border border-white/10 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">4</span>
+                  <div>
+                    <div class="font-semibold text-white text-xs">Async Queue &amp; Background Workers</div>
+                    <div class="text-slate-500 text-[11px]">HTTP delayed by emails, PDFs, or webhooks</div>
+                  </div>
+                </div>
+                <div class="text-slate-400 text-xs">BullMQ worker queue; return HTTP 202 (50k–100k DAU)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 10. COSTS -->
+        <div id="content-costs" class="stage-content space-y-4 hidden">
+          <div class="panel-base p-6 space-y-5">
+            <div class="border-b border-white/[0.06] pb-4">
+              <div class="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Unit Economics</div>
+              <h3 class="text-xl font-semibold text-white tracking-tight">Infrastructure Cost Realities</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Empirical monthly infrastructure expense brackets from Day 1 to 50,000 active users.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+              <div id="cost-card-mvp" class="panel-card p-5 space-y-3 border-emerald-500/40 bg-[#16211a] ring-1 ring-emerald-500/30 transition-all duration-200">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                  <span class="font-semibold text-white text-xs">MVP Tier</span>
+                  <span class="text-slate-400 text-[11px]">0 &ndash; 1,000 DAU</span>
+                </div>
+                <div class="text-2xl font-semibold text-white">
+                  $5 &ndash; $15 <span class="text-xs font-normal text-slate-500">/ mo</span>
+                </div>
+                <ul class="text-slate-400 space-y-1.5 text-[11px] pt-1">
+                  <li class="flex justify-between"><span>Frontend (Cloudflare/Vercel)</span><span class="text-slate-300">$0</span></li>
+                  <li class="flex justify-between"><span>Compute (VPS 2GB RAM)</span><span class="text-slate-300">$5 &ndash; $10</span></li>
+                  <li class="flex justify-between"><span>Managed PostgreSQL</span><span class="text-slate-300">$0</span></li>
+                </ul>
+              </div>
+
+              <div id="cost-card-prod" class="panel-card p-5 space-y-3 opacity-50 hover:opacity-100 transition-all duration-200">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                  <span class="font-semibold text-white text-xs">Production Tier</span>
+                  <span class="text-slate-400 text-[11px]">1,000 &ndash; 50,000 DAU</span>
+                </div>
+                <div class="text-2xl font-semibold text-white">
+                  $65 &ndash; $150 <span class="text-xs font-normal text-slate-500">/ mo</span>
+                </div>
+                <ul class="text-slate-400 space-y-1.5 text-[11px] pt-1">
+                  <li class="flex justify-between"><span>Compute (2x 4GB Nodes)</span><span class="text-slate-300">$30 &ndash; $40</span></li>
+                  <li class="flex justify-between"><span>Managed DB &amp; Backups</span><span class="text-slate-300">$25 &ndash; $45</span></li>
+                  <li class="flex justify-between"><span>In-Memory Redis</span><span class="text-slate-300">$10 &ndash; $20</span></li>
+                </ul>
+              </div>
+
+              <div id="cost-card-ent" class="panel-card p-5 space-y-3 opacity-50 hover:opacity-100 transition-all duration-200">
+                <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                  <span class="font-semibold text-white text-xs">Enterprise Tier</span>
+                  <span class="text-slate-400 text-[11px]">50,000+ DAU</span>
+                </div>
+                <div class="text-2xl font-semibold text-white">
+                  $800 &ndash; $2,500+ <span class="text-xs font-normal text-slate-500">/ mo</span>
+                </div>
+                <ul class="text-slate-400 space-y-1.5 text-[11px] pt-1">
+                  <li class="flex justify-between"><span>Multi-AZ ECS / ALB</span><span class="text-slate-300">$400 &ndash; $800</span></li>
+                  <li class="flex justify-between"><span>Aurora Multi-AZ + Replica</span><span class="text-slate-300">$350 &ndash; $700</span></li>
+                  <li class="flex justify-between"><span>Compliance &amp; WAF</span><span class="text-slate-300">$500+</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM CONTROL RAIL -->
+      <div class="panel-base px-4 py-2.5 flex items-center justify-between text-xs font-mono">
+        <button onclick="navPrev()" id="btn-bottom-prev" disabled class="flex items-center gap-1.5 px-3 py-1.5 rounded border border-white/10 bg-[#12151c] text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#1a1e28] transition">
+          <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          <span>Previous Stage</span>
+        </button>
+
+        <span class="text-slate-500 hidden sm:inline">Single-Mission Focus &bull; Zero Infinite Scroll</span>
+
+        <button onclick="navNext()" id="btn-bottom-next" class="flex items-center gap-1.5 px-3 py-1.5 rounded border border-white/10 bg-[#12151c] text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#1a1e28] transition">
+          <span>Next Stage</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const stageSequence = [
+      { id: "decision", cat: "01. SCOPE & GATES", title: "Execution Engine" },
+      { id: "prompts", cat: "01. SCOPE & GATES", title: "Prompt Matrix" },
+      { id: "kill-list", cat: "01. SCOPE & GATES", title: "Kill List Policy" },
+      { id: "arsenal", cat: "02. ARCHITECTURE", title: "Tech Stack Arsenal" },
+      { id: "topology", cat: "02. ARCHITECTURE", title: "Topology by Tier" },
+      { id: "network", cat: "02. ARCHITECTURE", title: "Packet Path" },
+      { id: "commands", cat: "03. DEVOPS & RUNBOOKS", title: "DevOps Reference" },
+      { id: "recipes", cat: "03. DEVOPS & RUNBOOKS", title: "Deploy Runbooks" },
+      { id: "troubleshoot", cat: "04. TRIAGE & SCALE", title: "Fault Diagnostics" },
+      { id: "scaling", cat: "04. TRIAGE & SCALE", title: "Scaling Ladder" },
+      { id: "costs", cat: "04. TRIAGE & SCALE", title: "Unit Economics" }
+    ];
+
+    let currentTabIndex = 0;
+    const completedTabs = {};
+
+    function switchTab(tabId) {
+      const idx = stageSequence.findIndex(s => s.id === tabId);
+      if (idx !== -1) {
+        currentTabIndex = idx;
+        renderActiveStage();
+      }
+    }
+
+    function navPrev() {
+      if (currentTabIndex > 0) {
+        currentTabIndex--;
+        renderActiveStage();
+      }
+    }
+
+    function navNext() {
+      if (currentTabIndex < stageSequence.length - 1) {
+        currentTabIndex++;
+        renderActiveStage();
+      }
+    }
+
+    function renderActiveStage() {
+      const stage = stageSequence[currentTabIndex];
+
+      // Update sidebar active classes
+      stageSequence.forEach((s) => {
+        const btn = document.getElementById(`tab-btn-${s.id}`);
+        const content = document.getElementById(`content-${s.id}`);
+        if (btn && content) {
+          if (s.id === stage.id) {
+            btn.className = "w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition bg-[#1d222b] text-white border border-white/10 font-medium";
+            content.classList.remove('hidden');
+          } else {
+            btn.className = "w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition text-slate-400 hover:text-slate-200";
+            content.classList.add('hidden');
+          }
+        }
+      });
+
+      // Update header labels
+      document.getElementById('stage-category-label').innerText = `${stage.cat} • STEP ${currentTabIndex + 1} OF ${stageSequence.length}`;
+      document.getElementById('stage-title-label').innerText = `/ ${stage.title}`;
+
+      // Update button disabled state
+      const isFirst = currentTabIndex === 0;
+      const isLast = currentTabIndex === stageSequence.length - 1;
+
+      document.getElementById('btn-nav-prev').disabled = isFirst;
+      document.getElementById('btn-bottom-prev').disabled = isFirst;
+      document.getElementById('btn-nav-next').disabled = isLast;
+      document.getElementById('btn-bottom-next').disabled = isLast;
+
+      // Update verified button
+      const isVerified = !!completedTabs[stage.id];
+      const verifyBtn = document.getElementById('btn-verify-stage');
+      const verifyText = document.getElementById('verify-stage-text');
+
+      if (isVerified) {
+        verifyBtn.className = "flex items-center gap-1.5 px-2.5 py-1 rounded border border-emerald-500/40 bg-emerald-950/30 text-emerald-300 transition";
+        verifyText.innerText = "Verified";
+      } else {
+        verifyBtn.className = "flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/10 bg-white/5 text-slate-400 hover:text-white transition";
+        verifyText.innerText = "Mark Verified";
+      }
+
+      lucide.createIcons();
+    }
+
+    function toggleActiveTabVerified() {
+      const stage = stageSequence[currentTabIndex];
+      completedTabs[stage.id] = !completedTabs[stage.id];
+
+      const dot = document.getElementById(`dot-${stage.id}`);
+      if (dot) {
+        if (completedTabs[stage.id]) {
+          dot.classList.remove('hidden');
+        } else {
+          dot.classList.add('hidden');
+        }
+      }
+
+      const count = Object.values(completedTabs).filter(Boolean).length;
+      document.getElementById('completed-count').innerText = `${count} / ${stageSequence.length}`;
+      renderActiveStage();
+    }
+
+    // Playbook Mode
+    let currentPlaybookTier = 'mvp';
+
+    function setPlaybookMode(mode) {
+      currentPlaybookTier = mode;
+      const btnMvp = document.getElementById('btn-mode-mvp');
+      const btnProd = document.getElementById('btn-mode-prod');
+      const btnEnt = document.getElementById('btn-mode-ent');
+
+      [btnMvp, btnProd, btnEnt].forEach(btn => {
+        btn.className = "flex items-center gap-2 px-3 py-1 rounded-md transition-all text-slate-400 hover:text-slate-200";
+      });
+
+      const pillLabel = document.getElementById('tier-pill-label');
+      const banner = document.getElementById('decision-tier-banner');
+      const dot = document.getElementById('decision-tier-dot');
+      const title = document.getElementById('decision-tier-title');
+      const desc = document.getElementById('decision-tier-desc');
+      const badge = document.getElementById('decision-tier-badge');
+
+      const topoMvp = document.getElementById('topo-card-mvp');
+      const topoProd = document.getElementById('topo-card-prod');
+      const topoEnt = document.getElementById('topo-card-ent');
+
+      const costMvp = document.getElementById('cost-card-mvp');
+      const costProd = document.getElementById('cost-card-prod');
+      const costEnt = document.getElementById('cost-card-ent');
+
+      // Reset card highlights
+      const resetCards = [topoMvp, topoProd, topoEnt, costMvp, costProd, costEnt].filter(Boolean);
+      resetCards.forEach(c => {
+        c.className = "panel-card p-5 space-y-4 opacity-40 hover:opacity-100 transition-all duration-200";
+      });
+
+      if (mode === 'mvp') {
+        btnMvp.className = "flex items-center gap-2 px-3 py-1 rounded-md transition-all bg-[#1d222b] text-white font-medium shadow-sm border border-white/10";
+        pillLabel.innerText = "Level 1 • Modular Monolith";
+        pillLabel.className = "text-emerald-400 font-medium";
+
+        if (banner) {
+          banner.className = "panel-inset p-3.5 border border-emerald-500/40 bg-emerald-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3";
+          dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0";
+          title.className = "font-mono text-xs font-semibold text-emerald-300";
+          title.innerText = "ACTIVE DIRECTIVE • 🟢 LEVEL 1: MVP MODULAR MONOLITH";
+          desc.innerText = "Strict single-process monolith. 1 vertical slice. Absolutely NO message queues, NO read replicas, NO microservices.";
+          badge.className = "text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-fit shrink-0";
+          badge.innerText = "ZERO SPECULATIVE BLOAT";
+        }
+
+        if (topoMvp) topoMvp.className = "panel-card p-5 space-y-4 border-emerald-500/50 bg-[#16211a] ring-2 ring-emerald-500/30 transition-all duration-200";
+        if (costMvp) costMvp.className = "panel-card p-5 space-y-3 border-emerald-500/50 bg-[#16211a] ring-2 ring-emerald-500/30 transition-all duration-200";
+
+        // Filter tech arsenal
+        filterArsenal('mvp');
+
+      } else if (mode === 'prod') {
+        btnProd.className = "flex items-center gap-2 px-3 py-1 rounded-md transition-all bg-[#1d222b] text-white font-medium shadow-sm border border-white/10";
+        pillLabel.innerText = "Level 2 • Decoupled Resilience";
+        pillLabel.className = "text-amber-400 font-medium";
+
+        if (banner) {
+          banner.className = "panel-inset p-3.5 border border-amber-500/40 bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3";
+          dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0";
+          title.className = "font-mono text-xs font-semibold text-amber-300";
+          title.innerText = "ACTIVE DIRECTIVE • 🟡 LEVEL 2: DECOUPLED RESILIENCE";
+          desc.innerText = "Asynchronous BullMQ worker queues, in-memory Redis cache, UFW firewall, Sentry telemetry, and Vitest test suites.";
+          badge.className = "text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 w-fit shrink-0";
+          badge.innerText = "MEASURED TELEMETRY SCALE";
+        }
+
+        if (topoProd) topoProd.className = "panel-card p-5 space-y-4 border-amber-500/50 bg-[#211d16] ring-2 ring-amber-500/30 transition-all duration-200";
+        if (costProd) costProd.className = "panel-card p-5 space-y-3 border-amber-500/50 bg-[#211d16] ring-2 ring-amber-500/30 transition-all duration-200";
+
+        // Filter tech arsenal
+        filterArsenal('prod');
+
+      } else if (mode === 'ent') {
+        btnEnt.className = "flex items-center gap-2 px-3 py-1 rounded-md transition-all bg-[#1d222b] text-white font-medium shadow-sm border border-white/10";
+        pillLabel.innerText = "Level 3 • High Availability";
+        pillLabel.className = "text-rose-400 font-medium";
+
+        if (banner) {
+          banner.className = "panel-inset p-3.5 border border-rose-500/40 bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3";
+          dot.className = "w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0";
+          title.className = "font-mono text-xs font-semibold text-rose-300";
+          title.innerText = "ACTIVE DIRECTIVE • 🔴 LEVEL 3: ENTERPRISE HIGH AVAILABILITY";
+          desc.innerText = "Multi-AZ Application Load Balancers, PostgreSQL Read/Write replicas, immutable audit logs, SSO/SAML, and 99.99% uptime.";
+          badge.className = "text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 w-fit shrink-0";
+          badge.innerText = "ZERO SINGLE POINT OF FAILURE";
+        }
+
+        if (topoEnt) topoEnt.className = "panel-card p-5 space-y-4 border-rose-500/50 bg-[#211619] ring-2 ring-rose-500/30 transition-all duration-200";
+        if (costEnt) costEnt.className = "panel-card p-5 space-y-3 border-rose-500/50 bg-[#211619] ring-2 ring-rose-500/30 transition-all duration-200";
+
+        // Filter tech arsenal
+        filterArsenal('all');
+      }
+    }
+
+    // Prompt Matrix
+    const promptLibrary = {
+      stage1: {
+        title: "Stage 1: Functional Scope & Boundary Prompt",
+        code: `Analyze this product concept: [INSERT RAW PRODUCT IDEA]
+
+Generate:
+1. Target Customer Profile (who experiences this bottleneck daily?)
+2. Core Problem & Unfair Alternative (how is this solved today in spreadsheets/manual tasks?)
+3. Single Primary Journey (1 unbroken happy path from sign-in to core value)
+4. MVP Scope & The Kill List (5 specific features strictly EXCLUDED from V1)
+5. Validation Metric (the single verifiable metric confirming customer demand)
+
+STRICT RULE: Do not generate code, schemas, or tech stack recommendations. Output the functional brief only.`
+      },
+      stage2: {
+        title: "Stage 2: Monolith-First Topology & Schema Design",
+        code: `Based on the approved Product Brief: [ATTACH BRIEF]
+
+Design:
+1. Stack Selection (monolith-first, justified strictly by team size and throughput)
+2. Minimal JIT Database Schema (<6 tables, Prisma/Drizzle format with foreign keys and query indexes)
+3. API Contracts (REST endpoints, HTTP methods, exact request/response JSON schemas)
+4. Session & Auth Strategy (HttpOnly session cookies vs JWT, RBAC roles)
+5. Host Architecture (VPS Docker Compose or serverless targets)
+
+STRICT RULE: Prioritize simplicity. Do not include microservices, Kafka, Kubernetes, or caching unless required by confirmed MVP load.`
+      },
+      stage3: {
+        title: "Stage 3: Vertical Slice Implementation Prompt",
+        code: `Implement ONLY this single feature slice: [INSERT FEATURE NAME]
+
+Execution Sequence:
+1. List all affected files before touching code
+2. Define API contract and server-side Zod validation schema
+3. Write database migration if schema modifications are required
+4. Implement all 7 mandatory UI states (Loading, Empty, Error, Success, Form Validation, Mobile, Unauthorized)
+
+STRICT RULE: Do not refactor files outside this feature's explicit scope boundary.`
+      },
+      stageDebug: {
+        title: "Stage 4: Surgical Bug Fixing Protocol",
+        code: `Isolate and resolve this defect: [PASTE ERROR MESSAGE OR STACK TRACE]
+
+Surgical Protocol:
+1. Root Cause: State WHY the failure occurred in 2 clear sentences.
+2. Minimal Safe Patch: Provide the fix modifying the fewest lines possible (<20 lines changed).
+3. Regression Test: Write 1 automated test reproducing the failure condition before applying the fix.
+
+STRICT RULE: Do not re-architect or refactor surrounding services.`
+      }
+    };
+
+    function selectPromptTab(tabKey) {
+      ['stage1', 'stage2', 'stage3', 'stageDebug'].forEach(id => {
+        const btn = document.getElementById(`tab-${id}`);
+        if (btn) btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition";
+      });
+      const activeBtn = document.getElementById(`tab-${tabKey}`);
+      if (activeBtn) activeBtn.className = "px-3 py-1.5 rounded-md bg-[#1d222b] text-white border border-white/10 font-medium transition";
+
+      const pData = promptLibrary[tabKey];
+      document.getElementById('prompt-card-title').innerText = pData.title;
+      document.getElementById('active-prompt-code').innerText = pData.code;
+    }
+
+    function copyActivePrompt() {
+      const code = document.getElementById('active-prompt-code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const btnText = document.getElementById('copy-btn-text');
+        btnText.innerText = "Copied";
+        setTimeout(() => { btnText.innerText = "Copy Prompt"; }, 2000);
+      });
+    }
+
+    function copyText(txt) {
+      navigator.clipboard.writeText(txt);
+    }
+
+    // Packet Traceroute
+    const networkNodes = {
+      user: {
+        title: "1. Client Application (Browser / Native)",
+        badge: "Origin Request",
+        what: "The client device initiating an HTTPS request over public Wi-Fi or cellular networks.",
+        why: "Requires authenticated transport and expects deterministic HTTP status codes (200, 400, 401, 500).",
+        cmd: "curl -iv https://yourdomain.com"
+      },
+      dns: {
+        title: "2. DNS Resolution Layer",
+        badge: "Anycast Resolver",
+        what: "Distributed global resolver mapping domain names to your host server's public IP address.",
+        why: "Routes packets to your infrastructure edge (<10ms resolution).",
+        cmd: "dig +short yourdomain.com"
+      },
+      firewall: {
+        title: "3. Linux Firewall (UFW / Security Group)",
+        badge: "Ingress Filter",
+        what: "Kernel-level packet filter (iptables) permitting only explicitly authorized incoming ports.",
+        why: "Isolates private ports (PostgreSQL 5432, Redis 6379, SSH 22) from external network scans.",
+        cmd: "sudo ufw status verbose"
+      },
+      nginx: {
+        title: "4. Nginx Reverse Proxy & TLS Termination",
+        badge: "Edge Gateway",
+        what: "High-performance web server terminating SSL/TLS certificates and proxying requests to internal ports.",
+        why: "Protects application runtimes from slow-client attacks, terminates TLS efficiently, and handles gzip/brotli compression.",
+        cmd: "sudo nginx -t && sudo systemctl status nginx"
+      },
+      docker: {
+        title: "5. Docker Virtual Bridge Network",
+        badge: "Container Bridge",
+        what: "Internal software bridge isolating containers within a private IP subnet (e.g. 172.18.0.0/16).",
+        why: "Enables service discovery via container names without exposing ports to the public host interface.",
+        cmd: "docker network ls && docker network inspect bridge"
+      },
+      app: {
+        title: "6. Application Compute Fleet (Node / Nest / Next)",
+        badge: "Runtime Worker",
+        what: "Stateless container process listening on internal port :3000.",
+        why: "Validates request payloads, evaluates session tokens, executes business logic, and manages transactions.",
+        cmd: "docker logs --tail 50 -f app_container"
+      },
+      db: {
+        title: "7. Persistent Data Store (PostgreSQL)",
+        badge: "ACID Vault",
+        what: "Relational database listening on private port :5432 with persistent host volume mounts.",
+        why: "Guarantees transactional consistency, foreign key integrity, and durable state storage.",
+        cmd: "docker exec -it postgres_container pg_isready"
+      }
+    };
+
+    function inspectNetworkNode(nodeKey) {
+      const node = networkNodes[nodeKey];
+      if (!node) return;
+
+      document.getElementById('net-detail-title').innerText = node.title;
+      document.getElementById('net-detail-badge').innerText = node.badge;
+      document.getElementById('net-detail-what').innerText = node.what;
+      document.getElementById('net-detail-why').innerText = node.why;
+      document.getElementById('net-detail-cmd').innerText = node.cmd;
+
+      ['user', 'dns', 'firewall', 'nginx', 'docker', 'app', 'db'].forEach(k => {
+        const el = document.getElementById(`net-node-${k}`);
+        if (el) {
+          if (k === nodeKey) {
+            el.classList.add('border-white/30', 'bg-[#1e222c]');
+          } else {
+            el.classList.remove('border-white/30', 'bg-[#1e222c]');
+          }
+        }
+      });
+    }
+
+    function triggerPacketAnimation() {
+      const sequence = ['user', 'dns', 'firewall', 'nginx', 'docker', 'app', 'db'];
+      sequence.forEach((k, idx) => {
+        setTimeout(() => { inspectNetworkNode(k); }, idx * 220);
+      });
+    }
+
+    // Triage Tree
+    let currentTriageStep = 1;
+    const triageSteps = [
+      {
+        question: "Does the domain name resolve to your host server's public IP?",
+        cmd: "nslookup yourdomain.com",
+        fixIfNo: "DNS records are unconfigured or propagating. Check your registrar or DNS provider. Ensure an A Record points to your server IP address.",
+        fixCmdIfNo: "dig +trace yourdomain.com"
+      },
+      {
+        question: "Does the host machine respond to direct ICMP echo requests (ping)?",
+        cmd: "ping -c 3 YOUR_SERVER_IP",
+        fixIfNo: "Host is unreachable. The VPS instance is offline in your cloud console, or provider security group rules block ICMP traffic.",
+        fixCmdIfNo: "Check VPS provider control panel -> Verify instance status: Running"
+      },
+      {
+        question: "Are HTTP (80) and HTTPS (443) open in the host firewall (UFW)?",
+        cmd: "sudo ufw status verbose",
+        fixIfNo: "Host firewall is blocking inbound web traffic. Allow ports 80 and 443 immediately.",
+        fixCmdIfNo: "sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw reload"
+      },
+      {
+        question: "Is the Nginx reverse proxy service active without configuration syntax errors?",
+        cmd: "sudo nginx -t && sudo systemctl status nginx",
+        fixIfNo: "Nginx daemon failed or has syntax errors. Test configuration files and inspect system logs.",
+        fixCmdIfNo: "sudo nginx -t && sudo journalctl -u nginx -n 20 --no-pager"
+      },
+      {
+        question: "Is your application container active and responding on local port :3000?",
+        cmd: "curl -I http://localhost:3000",
+        fixIfNo: "Application container crashed or failed to bind to port 3000. Inspect container logs for runtime exceptions or missing environment variables.",
+        fixCmdIfNo: "docker ps -a && docker logs --tail 50 <app_container_name>"
+      },
+      {
+        question: "Can the application container establish a TCP socket to the PostgreSQL container?",
+        cmd: "docker exec -it <app_container> nc -zv postgres 5432",
+        fixIfNo: "Database network socket unreachable. Verify DATABASE_URL hostname matches Docker Compose service name and PostgreSQL credentials are valid.",
+        fixCmdIfNo: "docker logs --tail 30 postgres_container"
+      }
+    ];
+
+    function handleTriageAnswer(isYes) {
+      const stepData = triageSteps[currentTriageStep - 1];
+      const resultBox = document.getElementById('triage-result-box');
+      const resultText = document.getElementById('triage-result-text');
+      const resultCode = document.getElementById('triage-result-code');
+
+      if (!isYes) {
+        resultBox.classList.remove('hidden');
+        resultText.innerText = stepData.fixIfNo;
+        resultCode.innerText = stepData.fixCmdIfNo;
+      } else {
+        if (currentTriageStep < triageSteps.length) {
+          currentTriageStep++;
+          loadTriageStep();
+        } else {
+          resultBox.classList.remove('hidden');
+          resultText.innerText = "All infrastructure layers verified healthy. If failures persist, inspect application business logic or client-side browser developer tools.";
+          resultCode.innerText = "Inspect browser DevTools (F12) -> Network / Console tabs";
+        }
+      }
+    }
+
+    function loadTriageStep() {
+      const stepData = triageSteps[currentTriageStep - 1];
+      document.getElementById('triage-step-number').innerText = `STEP ${currentTriageStep} OF ${triageSteps.length}`;
+      document.getElementById('triage-step-question').innerText = stepData.question;
+      document.getElementById('triage-step-cmd').innerText = stepData.cmd;
+      document.getElementById('triage-result-box').classList.add('hidden');
+    }
+
+    function resetTroubleshooter() {
+      currentTriageStep = 1;
+      loadTriageStep();
+    }
+
+    function filterCommands(cat) {
+      const items = document.querySelectorAll('.cmd-item');
+      items.forEach(item => {
+        if (cat === 'all' || item.dataset.category === cat) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    // Tech Arsenal Data & Inspection
+    const techData = {
+      nextjs: {
+        name: "Next.js 14 (App Router)",
+        badge: "MVP TIER",
+        badgeClass: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+        cat: "Framework",
+        concept: "Unified client and server runtime. Server Components stream initial HTML from Node.js with direct database access without exposing secret keys to the browser. Server Actions handle RPC mutations securely with automatic cache revalidation.",
+        why: "Single deployment artifact for client and server. Eliminates cross-origin CORS debugging, duplicate pipelines, and frontend-backend version desyncs.",
+        steps: [
+          "Initialize project: pnpm create next-app@14 my-app --typescript --tailwind --app",
+          "Configure src/app directory with layout.tsx, page.tsx, and loading.tsx Suspense boundaries",
+          "Create server action mutations in separate 'actions.ts' files marked with 'use server'",
+          "Validate all mutation inputs with Zod schemas before triggering database queries",
+          "Build and verify production output: pnpm build && pnpm start"
+        ],
+        commands: [
+          { cmd: "pnpm dev", desc: "Runs local Turbopack/Webpack development server on port :3000", level: "read" },
+          { cmd: "pnpm build", desc: "Compiles TypeScript, optimizes bundles, and pre-renders routes", level: "write" },
+          { cmd: "pnpm start", desc: "Runs optimized Node.js production server process on port :3000", level: "read" }
+        ],
+        code: "pnpm create next-app@14 my-app --typescript --tailwind --app",
+        rules: [
+          "Keep Server Actions strictly in separate actions.ts files with 'use server'.",
+          "Validate all action inputs with Zod schemas before querying the database."
+        ],
+        pitfall: "Client bundle bloat from accidentally importing Node.js native libraries in 'use client' components."
+      },
+      postgres: {
+        name: "PostgreSQL 16",
+        badge: "MVP TIER",
+        badgeClass: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+        cat: "Database",
+        concept: "Rock-solid relational database engine enforcing ACID transactional guarantees. Tables maintain strict foreign keys with cascading deletions, while JSONB columns offer flexible schemaless attribute storage.",
+        why: "ACID transactions, foreign key cascades, and JSONB document support. Protects relational integrity from Day 1.",
+        steps: [
+          "Provision PostgreSQL instance via Docker Compose (or managed Supabase / Neon)",
+          "Define entities with strict constraints (NOT NULL, UNIQUE, FOREIGN KEY with ON DELETE CASCADE)",
+          "Add B-tree indexes on foreign keys (userId, orgId) and filtered columns",
+          "Configure connection pool limits and statement timeouts (statement_timeout = '10s')",
+          "Schedule automated nightly database dumps: 'pg_dump -Fc' to offsite storage"
+        ],
+        commands: [
+          { cmd: "docker exec -it postgres_container psql -U postgres -d app_db", desc: "Opens interactive PostgreSQL CLI terminal", level: "read" },
+          { cmd: "pg_dump -U postgres -h localhost -d app_db -F c -b -v -f backup.dump", desc: "Creates compressed transactional binary backup of entire database", level: "read" },
+          { cmd: "dropdb -U postgres app_db", desc: "HAZARDOUS: Irrevocably destroys specified database and all tables", level: "hazardous" }
+        ],
+        code: "docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=secret postgres:16-alpine",
+        rules: [
+          "Always index foreign keys (userId, orgId) and columns used in WHERE/ORDER BY filters.",
+          "Never bind port 5432 to 0.0.0.0; bind strictly to 127.0.0.1 or private Docker network."
+        ],
+        pitfall: "Sequential scans (Seq Scan) crashing CPU at >50k rows due to missing composite indexes."
+      },
+      prisma: {
+        name: "Prisma ORM",
+        badge: "MVP TIER",
+        badgeClass: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+        cat: "ORM & Migrations",
+        concept: "Declarative schema-first database abstraction. You define models in schema.prisma, and the CLI compiles them into deterministic SQL migration scripts while generating strongly typed client methods.",
+        why: "End-to-end type safety from SQL schema to frontend props with declarative migration tracking.",
+        steps: [
+          "Install dependencies: pnpm add @prisma/client && pnpm add -D prisma",
+          "Initialize schema: pnpm prisma init and set DATABASE_URL in .env",
+          "Draft data models with relations and @index attributes in prisma/schema.prisma",
+          "Generate and apply local migration: npx prisma migrate dev --name init",
+          "Deploy migrations in CI/CD pipeline: npx prisma migrate deploy"
+        ],
+        commands: [
+          { cmd: "npx prisma migrate dev --name <name>", desc: "Generates new SQL migration and applies it locally", level: "write" },
+          { cmd: "npx prisma migrate deploy", desc: "Applies pending migrations in production without interactive prompt", level: "write" },
+          { cmd: "npx prisma studio", desc: "Launches local visual GUI table browser on port :5555", level: "read" }
+        ],
+        code: "pnpm add @prisma/client && pnpm add -D prisma && npx prisma init",
+        rules: [
+          "Run 'prisma migrate dev' locally and 'prisma migrate deploy' in production CI/CD.",
+          "Always use select: { id: true, name: true } to return only required columns."
+        ],
+        pitfall: "The N+1 query problem when looping over records without batch includes."
+      },
+      redis: {
+        name: "Redis 7 (Alpine)",
+        badge: "PRODUCTION TIER",
+        badgeClass: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+        cat: "In-Memory Cache",
+        concept: "Single-threaded, in-memory key-value data structure store. Operates entirely in RAM with sub-millisecond execution times. Used for distributed cache keys with TTL, token bucket rate limiting, and BullMQ queues.",
+        why: "Sub-millisecond latency for rate limiting, session caching, and BullMQ worker queues.",
+        steps: [
+          "Add Redis container to docker-compose.yml with 256MB memory cap and allkeys-lru eviction",
+          "Configure client library (ioredis) with automatic reconnect backoff",
+          "Wrap expensive slow queries with cache-aside pattern (check Redis -> query DB if miss -> set with TTL)",
+          "Implement sliding window rate limiting on public authentication routes",
+          "Mount persistent redis_data volume for append-only file (AOF) persistence"
+        ],
+        commands: [
+          { cmd: "docker exec -it redis_container redis-cli ping", desc: "Verifies Redis daemon responds with PONG", level: "read" },
+          { cmd: "docker exec -it redis_container redis-cli info memory", desc: "Inspects RAM utilization and peak memory", level: "read" },
+          { cmd: "docker exec -it redis_container redis-cli flushall", desc: "HAZARDOUS: Instantly deletes all keys across all Redis databases", level: "hazardous" }
+        ],
+        code: "redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass $REDIS_PASS",
+        rules: [
+          "Always set maxmemory and LRU eviction policy so Redis never crashes host RAM.",
+          "Always set explicit TTL (Time-To-Live) on cached keys."
+        ],
+        pitfall: "Running 'KEYS *' in production which locks the single-threaded Redis process."
+      },
+      docker: {
+        name: "Docker & Compose",
+        badge: "MVP TIER",
+        badgeClass: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+        cat: "Containerization",
+        concept: "Kernel-level namespace and cgroup process isolation. Packages application bytecode, Node.js runtime, OS libraries, and configurations into immutable image layers that execute identically on any Linux host.",
+        why: "Guarantees identical runtime environment between local machine and Linux VPS.",
+        steps: [
+          "Write multi-stage Dockerfile (deps, builder, runner) based on node:20-alpine",
+          "Draft docker-compose.yml linking web app, postgres, and redis in a shared private bridge network",
+          "Mount named volumes for postgres_data to guarantee disk persistence",
+          "Add container healthcheck probes to prevent app startup before database is ready",
+          "Launch and verify containers in detached mode: docker compose up -d --build"
+        ],
+        commands: [
+          { cmd: "docker ps -a", desc: "Lists all running and stopped containers with uptime status", level: "read" },
+          { cmd: "docker logs -f --tail 100 <app>", desc: "Streams live output logs from specified container process", level: "read" },
+          { cmd: "docker compose up -d --build", desc: "Rebuilds images and starts container stack in background", level: "write" }
+        ],
+        code: "docker compose up -d --build && docker ps",
+        rules: [
+          "Run containers as non-root user (node or nextjs) inside Dockerfile.",
+          "Mount persistent database storage exclusively into named Docker volumes."
+        ],
+        pitfall: "Data loss on container recreate caused by forgetting persistent volume mounts."
+      },
+      nginx: {
+        name: "Nginx Reverse Proxy",
+        badge: "MVP TIER",
+        badgeClass: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+        cat: "Reverse Proxy",
+        concept: "Asynchronous event-driven web server and reverse proxy. Sits on the public network edge handling ports 80 and 443, terminating TLS cryptographic handshakes, handling timeouts, and forwarding clean HTTP to internal Docker ports.",
+        why: "Shields Node.js from slow clients, terminates TLS 1.3 certificates, and handles gzip.",
+        steps: [
+          "Install Nginx on host Linux VPS: sudo apt install nginx -y",
+          "Create virtual host file in /etc/nginx/sites-available/app.conf",
+          "Configure proxy_pass to http://127.0.0.1:3000 with Host and X-Forwarded headers",
+          "Test configuration syntax: sudo nginx -t",
+          "Issue automated TLS certificate via Certbot: sudo certbot --nginx -d yourdomain.com"
+        ],
+        commands: [
+          { cmd: "sudo nginx -t", desc: "Validates Nginx configuration files for syntax errors without restarting", level: "read" },
+          { cmd: "sudo systemctl reload nginx", desc: "Gracefully reloads configuration without dropping active connections", level: "write" },
+          { cmd: "sudo journalctl -u nginx -n 50 --no-pager", desc: "Reads the 50 most recent systemd logs for Nginx daemon", level: "read" }
+        ],
+        code: "sudo nginx -t && sudo systemctl reload nginx",
+        rules: [
+          "Always test syntax with 'sudo nginx -t' before reloading.",
+          "Forward X-Forwarded-For and X-Forwarded-Proto headers to backend containers."
+        ],
+        pitfall: "Missing proxy headers causing Next.js to loop infinitely on HTTPS redirect checks."
+      },
+      cloudflare: {
+        name: "Cloudflare (Anycast CDN & WAF)",
+        badge: "PRODUCTION TIER",
+        badgeClass: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+        cat: "Edge Security",
+        concept: "Distributed Anycast reverse proxy network operating across 300+ global cities. Incoming DNS lookups and HTTP packets route to the nearest Cloudflare edge node, which terminates SSL, filters DDoS, and executes WAF rules.",
+        why: "Absorbs DDoS attacks at the edge, hides origin IP, and terminates TLS 1.3 globally.",
+        steps: [
+          "Add domain to Cloudflare dashboard and change nameservers at registrar",
+          "Create proxied (Orange Cloud) A Record pointing root (@) and subdomains to server IPv4",
+          "Set SSL/TLS encryption mode to 'Full (strict)'",
+          "Configure Web Application Firewall (WAF) rate limiting on authentication routes (/api/auth/*)",
+          "Verify origin server IP is hidden from global DNS scans"
+        ],
+        commands: [
+          { cmd: "dig +short yourdomain.com", desc: "Confirms domain resolves to Cloudflare Anycast edge IP (origin hidden)", level: "read" },
+          { cmd: "curl -Iv https://yourdomain.com", desc: "Verifies HTTP/3 edge TLS termination and cf-ray tracking headers", level: "read" }
+        ],
+        code: "# Set Nameservers at domain registrar to Cloudflare Anycast",
+        rules: [
+          "Set SSL/TLS encryption mode to 'Full (strict)' to avoid MITM packet sniffing.",
+          "Keep origin VPS IPv4 hidden; never create unproxied (DNS-only) records to same IP."
+        ],
+        pitfall: "Setting SSL mode to 'Flexible', triggering infinite 301 redirect loops."
+      },
+      stripe: {
+        name: "Stripe Webhook Engine",
+        badge: "PRODUCTION TIER",
+        badgeClass: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+        cat: "Billing & Webhooks",
+        concept: "Financial transaction pipeline. Your server creates signed Checkout Sessions via REST API; users input card data directly into Stripe's PCI-certified iframe; Stripe asynchronously dispatches cryptographic HMAC-signed webhook events to confirm authorization.",
+        why: "Global payment standard with PCI compliance, hosted checkout, and subscription lifecycle.",
+        steps: [
+          "Configure Stripe dashboard and store STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in .env",
+          "Create server-side checkout session route handler returning Stripe hosted URL",
+          "Create webhook receiver route (/api/webhooks/stripe) capturing unparsed raw request buffer",
+          "Verify cryptographic HMAC signature using stripe.webhooks.constructEvent()",
+          "Check database WebhookEvents table to guarantee idempotent execution before updating accounts"
+        ],
+        commands: [
+          { cmd: "stripe listen --forward-to localhost:3000/api/webhooks/stripe", desc: "Streams Stripe test webhooks directly to local development server", level: "read" },
+          { cmd: "stripe trigger payment_intent.succeeded", desc: "Emulates successful payment webhook event for testing", level: "read" }
+        ],
+        code: "const event = stripe.webhooks.constructEvent(rawBody, sig, secret);",
+        rules: [
+          "Capture raw unparsed request buffer for cryptographic HMAC signature verification.",
+          "Check internal WebhookEvents database table before processing to enforce idempotency."
+        ],
+        pitfall: "Granting paid customer access on client-side redirect rather than verified webhook."
+      },
+      bullmq: {
+        name: "BullMQ & Redis Queues",
+        badge: "PRODUCTION TIER",
+        badgeClass: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+        cat: "Background Jobs",
+        concept: "Persistent FIFO and delayed message queue engine built on Redis streams. Web processes produce job records into Redis in <2ms, while background worker processes consume jobs concurrently with automated retries.",
+        why: "Decouples slow tasks (emails, webhooks, processing) so HTTP responses return in <50ms.",
+        steps: [
+          "Install BullMQ: pnpm add bullmq ioredis",
+          "Define Redis connection configuration with maxRetriesPerRequest: null",
+          "Instantiate Queue instance in web application to enqueue jobs with payload and retry parameters",
+          "Create dedicated worker process (worker.ts) listening to the queue",
+          "Supervise worker execution via Docker container or systemd daemon"
+        ],
+        commands: [
+          { cmd: "pnpm exec ts-node src/workers/email.worker.ts", desc: "Starts worker process locally to consume queue jobs", level: "read" },
+          { cmd: "docker exec -it redis_container redis-cli keys 'bull:*'", desc: "Inspects active BullMQ queue keys and metadata in Redis", level: "read" }
+        ],
+        code: "const queue = new Queue('emails', { connection: redisConfig });",
+        rules: [
+          "All job processors must be idempotent (re-running produces identical result).",
+          "Pass record IDs in job payloads ({ orderId }), never huge database objects."
+        ],
+        pitfall: "Workers crashing silently without systemd or Docker process supervisor."
+      },
+      typescript: {
+        name: "TypeScript 5",
+        badge: "MVP TIER",
+        badgeClass: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+        cat: "Type Safety",
+        concept: "Syntactic superset of JavaScript adding static type annotations. Types are erased at compile time, outputting standard JavaScript, while the compiler prevents runtime crashes and guarantees object shapes.",
+        why: "Catches undefined errors and interface mismatches at compile time before production.",
+        steps: [
+          "Install TypeScript: pnpm add -D typescript @types/node @types/react",
+          "Configure tsconfig.json with strict: true and modern moduleResolution ('bundler')",
+          "Define domain interfaces for database entities, API payloads, and component props",
+          "Share DTO types between server actions and frontend client components",
+          "Enforce type check in CI pipeline: pnpm tsc --noEmit"
+        ],
+        commands: [
+          { cmd: "pnpm tsc --noEmit", desc: "Runs full project static type check across all files without emitting JS", level: "read" },
+          { cmd: "pnpm tsc --watch", desc: "Runs type checker in background with incremental rebuilds", level: "read" }
+        ],
+        code: "pnpm add -D typescript @types/node @types/react",
+        rules: [
+          "Enable strict: true from day one; never use 'any'.",
+          "Share DTO interfaces across API contracts and frontend views."
+        ],
+        pitfall: "Using type assertions ('as Type') that bypass compiler safety and hide null errors."
+      },
+      tailwind: {
+        name: "Tailwind CSS",
+        badge: "MVP TIER",
+        badgeClass: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+        cat: "Design Tokens",
+        concept: "Compiler that scans source code templates for utility classes and generates a minimal, deduplicated CSS stylesheet. Constrains design to fixed tokens (4px spacing scale, fixed color palettes) directly in markup.",
+        why: "Enforces 4px spacing scale and purges unused styles into a tiny 15KB stylesheet.",
+        steps: [
+          "Install packages: pnpm add -D tailwindcss postcss autoprefixer",
+          "Initialize configuration: npx tailwindcss init -p",
+          "Define semantic CSS variables (--surface-panel, --border-subtle) in global CSS",
+          "Configure content paths in tailwind.config.js to scan all TSX components",
+          "Verify production CSS bundle size is under 30KB during 'pnpm build'"
+        ],
+        commands: [
+          { cmd: "npx tailwindcss -i ./src/app/globals.css -o ./dist/output.css --minify", desc: "Compiles and minifies standalone production CSS bundle", level: "write" }
+        ],
+        code: "pnpm add -D tailwindcss postcss autoprefixer && npx tailwindcss init -p",
+        rules: [
+          "Stick strictly to standard spacing (p-2, p-4, gap-3); never use arbitrary inline values.",
+          "Extract repeating component patterns into React components, not @apply classes."
+        ],
+        pitfall: "Writing 40-class unreadable strings without component extraction."
+      },
+      vitest: {
+        name: "Vitest & Playwright",
+        badge: "PRODUCTION TIER",
+        badgeClass: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+        cat: "Integration & E2E",
+        concept: "Dual-tier testing pyramid. Vitest executes sub-second unit and database integration tests in Node.js using Vite. Playwright drives real Chromium, Firefox, and WebKit browser sessions in headless mode to test real user journeys.",
+        why: "Vitest runs TypeScript tests with sub-second feedback; Playwright tests browser happy paths.",
+        steps: [
+          "Install Vitest and Playwright: pnpm add -D vitest @playwright/test",
+          "Create vitest.config.ts with alias paths matching tsconfig",
+          "Write integration tests validating database mutations and server actions",
+          "Write 1 Playwright E2E smoke test verifying the core happy path",
+          "Add test step to GitHub Actions CI to block pull request merges on failure"
+        ],
+        commands: [
+          { cmd: "pnpm vitest run", desc: "Executes unit and integration test suites once with summary report", level: "read" },
+          { cmd: "pnpm playwright test", desc: "Runs headless end-to-end browser tests across Chromium, Firefox, and WebKit", level: "read" }
+        ],
+        code: "pnpm add -D vitest @playwright/test && pnpm vitest run",
+        rules: [
+          "Focus tests on integration boundaries (server actions, DB mutations, webhooks).",
+          "Write 1 Playwright smoke test verifying the core happy path before launching."
+        ],
+        pitfall: "Writing brittle unit tests that mock internal methods and break on minor refactoring."
+      }
+    };
+
+    function inspectTech(techId) {
+      const data = techData[techId];
+      if (!data) return;
+
+      document.querySelectorAll('.tech-select-btn').forEach(btn => {
+        btn.classList.remove('bg-[#1c222c]', 'border-white/20', 'text-white');
+        btn.classList.add('bg-[#12151c]', 'border-white/5', 'text-slate-400');
+      });
+      const activeBtn = document.getElementById(`btn-tech-${techId}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-[#12151c]', 'border-white/5', 'text-slate-400');
+        activeBtn.classList.add('bg-[#1c222c]', 'border-white/20', 'text-white');
+      }
+
+      document.getElementById('tech-detail-name').innerText = data.name;
+      document.getElementById('tech-detail-cat').innerText = data.cat;
+      document.getElementById('tech-detail-badge').innerText = data.badge;
+      document.getElementById('tech-detail-badge').className = `text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${data.badgeClass}`;
+      document.getElementById('tech-detail-concept').innerText = data.concept;
+      document.getElementById('tech-detail-code').innerText = data.code;
+      document.getElementById('tech-detail-pitfall').innerText = data.pitfall;
+
+      // Render Steps
+      const stepsList = document.getElementById('tech-detail-steps');
+      if (stepsList && data.steps) {
+        stepsList.innerHTML = data.steps.map(s => `<li class="leading-relaxed font-sans">${s}</li>`).join('');
+      }
+
+      // Render Commands
+      const cmdBox = document.getElementById('tech-detail-commands');
+      if (cmdBox && data.commands) {
+        cmdBox.innerHTML = data.commands.map(c => `
+          <div class="p-2 rounded bg-[#090a0d] border border-white/5 space-y-1 font-mono text-[11px]">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] px-1.5 py-0.2 rounded border uppercase ${c.level === 'read' ? 'text-emerald-400 border-emerald-500/30' : c.level === 'write' ? 'text-amber-400 border-amber-500/30' : 'text-rose-400 border-rose-500/30'}">${c.level}</span>
+              <button onclick="copyText('${c.cmd.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-white text-[10px]">Copy</button>
+            </div>
+            <code class="text-slate-200 block truncate">${c.cmd}</code>
+            <div class="text-[10px] text-slate-500 font-sans truncate">${c.desc}</div>
+          </div>
+        `).join('');
+      }
+
+      // Render Rules
+      const rulesList = document.getElementById('tech-detail-rules');
+      if (rulesList && data.rules) {
+        rulesList.innerHTML = data.rules.map(r => `<li class="flex items-start gap-1.5"><span class="text-emerald-400">✓</span><span>${r}</span></li>`).join('');
+      }
+    }
+
+    function copyTechCode() {
+      const code = document.getElementById('tech-detail-code').innerText;
+      copyText(code);
+    }
+
+    function filterArsenal(tier) {
+      // filters can highlight or display
+      if (tier === 'all') inspectTech('nextjs');
+      else if (tier === 'mvp') inspectTech('postgres');
+      else if (tier === 'prod') inspectTech('redis');
+    }
+
+    // Initialize View
+    renderActiveStage();
+  </script>
+</body>
+</html>

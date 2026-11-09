@@ -1,0 +1,38 @@
+{
+  "name": "@product-shipping-os/skills",
+  "version": "1.0.0",
+  "description": "The definitive open-source Product Shipping Operating System and skill pack for AI coding assistants.",
+  "main": "README.md",
+  "scripts": {
+    "install:skills:win": "powershell -ExecutionPolicy Bypass -File ./scripts/install-skills.ps1",
+    "install:skills:unix": "bash ./scripts/install-skills.sh",
+    "web:dev": "pnpm --prefix apps/web dev",
+    "web:clean": "pnpm --prefix apps/web clean",
+    "web:build": "pnpm --prefix apps/web build",
+    "web:start": "pnpm --prefix apps/web start",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "antigravity",
+    "ai-agent",
+    "skills",
+    "fullstack",
+    "product-shipping",
+    "apple-design",
+    "vertical-slices",
+    "saas",
+    "payments",
+    "aba-payway",
+    "stripe"
+  ],
+  "author": "Product Shipping OS Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/product-shipping-os.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/product-shipping-os/issues"
+  },
+  "homepage": "https://github.com/your-username/product-shipping-os#readme"
+}
